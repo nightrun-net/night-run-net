@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>پروفایل</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 2rem auto;
+      background: #f4f7f9;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      direction: rtl;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    nav a, #logoutBtn {
+      color: #4a90e2;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-size: 1rem;
+    }
+
+    h1, h2 {
+      color: #2c3e50;
+    }
+
+    label {
+      margin-top: 1rem;
+      display: block;
+      font-weight: 500;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-top: 0.4rem;
+      font-size: 1rem;
+    }
+
+    button {
+      margin-top: 1rem;
+      padding: 0.7rem 1.2rem;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #357abd;
+    }
+
+    .success {
+      color: green;
+      margin-top: 0.5rem;
+    }
+
+    .error {
+      color: red;
+      margin-top: 0.5rem;
+    }
+
+    .user-list {
+      margin-top: 2rem;
+      background: #ffffff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .user-list ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .user-list li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="dashboard.html">← زفرین بو لیستا زانیاریا</a>
+    <button id="logoutBtn">دەرکەفتن</button>
+  </nav>
+
+  <h1>پروفایلێ بکارهێنەری</h1>
+  <div class="section">
+    <p><strong>  بکارهێنەرێ نوکە:</strong> <span id="userEmail"></span></p>
+  </div>
+
+  <!-- گۆڕینی وشەی نهێنی -->
+  <div class="section">
+    <h2>گوهرینا ژمارا نهێنی</h2>
+    <label for="newPassword">ژمارا نهێنیا نوی</label>
+    <input type="password" id="newPassword"/>
+    <button id="changePassBtn">گوهرینا ژمارا نهێنی</button>
+    <div id="passMsg"></div>
+  </div>
+
+  <!-- زیادکردنی بەکارهێنەری نوێ -->
+  <div class="section">
+    <h2>زێدەکرنا بکارهێنەرەکێ نوی</h2>
+    <label for="newUserEmail">ئیمەیڵ</label>
+    <input type="email" id="newUserEmail" />
+    <label for="newUserPassword">ژمارا نهێنی</label>
+    <input type="password" id="newUserPassword" />
+    <button id="addUserBtn">زێدەکرن</button>
+    <div id="addUserMsg"></div>
+  </div>
+
+  <!-- لیستی بەکارهێنەران -->
+  <div class="user-list">
+    <h2>لیستا بکارهێنەرا</h2>
+    <ul id="usersList">
+      <li> لئێگەریان...</li>
+    </ul>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
+      authDomain: "edirsbarwari-7723e.firebaseapp.com",
+      databaseURL: "https://edirsbarwari-7723e-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "edirsbarwari-7723e",
+      storageBucket: "edirsbarwari-7723e.firebasestorage.app",
+      messagingSenderId: "1098821018295",
+      appId: "1:1098821018295:web:06b1d698b6d0b43b226332",
+      measurementId: "G-818MFB3X5H"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const userEmailSpan = document.getElementById('userEmail');
+    const newPasswordInput = document.getElementById('newPassword');
+    const changePassBtn = document.getElementById('changePassBtn');
+    const passMsgDiv = document.getElementById('passMsg');
+
+    const newUserEmailInput = document.getElementById('newUserEmail');
+    const newUserPasswordInput = document.getElementById('newUserPassword');
+    const addUserBtn = document.getElementById('addUserBtn');
+    const addUserMsgDiv = document.getElementById('addUserMsg');
+
+    const usersListUl = document.getElementById('usersList');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // دڵنیابوون لە هاتووە
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'index.html';
+      } else {
+        userEmailSpan.textContent = user.email;
+        loadUsers();
+      }
+    });
+
+    // چوونە دەرەوە
+    logoutBtn.addEventListener('click', () => {
+      auth.signOut().then(() => {
+        window.location.href = 'index.html';
+      });
+    });
+
+    // گۆڕینی وشەی نهێنی
+    changePassBtn.addEventListener('click', () => {
+      const newPass = newPasswordInput.value.trim();
+      passMsgDiv.textContent = '';
+      passMsgDiv.className = '';
+
+      if (newPass.length < 6) {
+        passMsgDiv.textContent = 'وشەی نهێنی دەبێت بەلایەنی کەم 6 پیت بێت.';
+        passMsgDiv.className = 'error';
+        return;
+      }
+
+      auth.currentUser.updatePassword(newPass)
+        .then(() => {
+          alert('وشەی نهێنی بە سەرکەوتووی گۆڕدرا!');
+          newPasswordInput.value = '';
+        })
+        .catch(error => {
+          passMsgDiv.textContent = error.message;
+          passMsgDiv.className = 'error';
+        });
+    });
+
+    // زیادکردنی بەکارهێنەری نوێ
+    addUserBtn.addEventListener('click', () => {
+      const email = newUserEmailInput.value.trim();
+      const password = newUserPasswordInput.value.trim();
+      addUserMsgDiv.textContent = '';
+      addUserMsgDiv.className = '';
+
+      if (!email || !password) {
+        addUserMsgDiv.textContent = 'تکایە هەردوو خانە پڕبکەرەوە.';
+        addUserMsgDiv.className = 'error';
+        return;
+      }
+
+      if (password.length < 6) {
+        addUserMsgDiv.textContent = 'وشەی نهێنی دەبێت لە 6 پیت زۆرتر بێت.';
+        addUserMsgDiv.className = 'error';
+        return;
+      }
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          const uid = userCredential.user.uid;
+          return db.ref('users/' + uid).set({
+            email: email,
+            createdAt: Date.now()
+          });
+        })
+        .then(() => {
+          alert('بەکارهێنەری نوێ زیادکرا. تکایە دووبارە بچۆ ژوورەوە.');
+          window.location.href = 'index.html';
+        })
+        .catch(error => {
+          addUserMsgDiv.textContent = error.message;
+          addUserMsgDiv.className = 'error';
+        });
+    });
+
+    // بارکردنی لیستی بەکارهێنەران
+    function loadUsers() {
+      usersListUl.innerHTML = '';
+      db.ref('users').once('value')
+        .then(snapshot => {
+          const users = snapshot.val();
+          if (!users) {
+            usersListUl.innerHTML = '<li>هیچ بەکارهێنەرێک نەدۆزرایەوە.</li>';
+            return;
+          }
+          Object.values(users).forEach(user => {
+            const li = document.createElement('li');
+            li.textContent = user.email;
+            usersListUl.appendChild(li);
+          });
+        })
+        .catch(() => {
+          usersListUl.innerHTML = '<li>هەڵە لە کاتێکدا لیست دابەزێتەوە.</li>';
+        });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>لیستا ویلان</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            direction: rtl;
+            text-align: right;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            background: white;
+            padding: 20px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 93%;
+            padding: 10px;
+            padding-right: 35px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .icon {
+            position: absolute;
+            right: 10px;
+            top: 40px;
+            color: gray;
+        }
+        .btn-save, .btn-back {
+            width: 100%;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .btn-save i, .btn-back i {
+            margin-left: 10px;
+        }
+        .btn-save:hover, .btn-back:hover {
+            background: #34495e;
+        }
+        /* Search Bar */
+        .search-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .search-container input {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        /* Grid Container */
+        .grid-container {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-height: 900px;
+            overflow-y: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            text-align: center;
+        }
+        .grid-item {
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: right;
+            font-size: 20px;
+            line-height: 1.5;
+        }
+        /* Updated buttons style */
+        .grid-item button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            margin-left: 8px;
+            padding: 6px 8px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            color: white;
+        }
+        .grid-item button.edit-btn {
+            color: #4caf50; /* green */
+        }
+        .grid-item button.edit-btn:hover {
+            background-color: #4caf5077;
+        }
+        .grid-item button.delete-btn {
+            color: #e74c3c; /* red */
+        }
+        .grid-item button.delete-btn:hover {
+            background-color: #e74c3c77;
+        }
+        /* Totals section */
+        .totals {
+            margin-top: 15px;
+            background: #2c3e50;
+            color: white;
+            font-weight: bold;
+            padding: 15px 20px;
+            border-radius: 8px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+        }
+        .totals span {
+            display: inline-block;
+            min-width: 150px;
+        }
+        .styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.styled-table th, .styled-table td {
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.styled-table th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+}
+
+.styled-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.edit-btn{
+  background-color: #4CAF50;
+  color: white;
+  padding: 5px 8px;
+  margin: 0 2px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.delete-btn {
+  background-color: #f44336;
+  color: white;
+  padding: 5px 8px;
+  margin: 0 2px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+    </style>
+</head>
+<body>
+        <!-- Totals displayed here -->
+        <div class="totals" id="totalsSection" style="display:none;">
+            <span>بهایێ کرینا ویلان : $ <span id="totalBuy">0</span></span>
+            <span>بهایێ فروتنا ویلان : $ <span id="totalSell">0</span></span>
+        </div>
+
+        <br>
+        <br>
+        <br>
+        
+
+    <div class="container">
+        <h2>لیستا ویلان</h2>
+
+        <div class="form-group">
+            <label for="wheelCode"> کودێ ویلی :</label>
+            <input type="text" id="wheelCode"/>
+            <i class="fas fa-car icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="wheelColor">رەنگێ ویلی :</label>
+            <input type="text" id="wheelColor"/>
+            <i class="fas fa-palette icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="wheelSize">قەبارێ ویلی :</label>
+            <input type="text" id="wheelSize"/>
+            <i class="fas fa-circle-notch icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="buyAmount">بهایێ کرینێ :</label>
+            <input type="number" id="buyAmount" />
+            <i class="fas fa-dollar-sign icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="sellAmount">بهایێ فروتنێ :</label>
+            <input type="number" id="sellAmount"  />
+            <i class="fas fa-tag icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="quantity"> ژمارە:</label>
+            <input type="number" id="quantity"  />
+            <i class="fas fa-boxes icon"></i>
+        </div>
+
+        <button class="btn-save" onclick="saveWheel()">
+            <i class="fas fa-save"></i> تومارکان
+        </button>
+
+        <button class="btn-back" onclick="goBack()">
+            <i class="fas fa-arrow-right"></i>  زفرین بو لیستا سەرەکی 
+        </button>
+    </div>
+
+    <div class="search-container">
+        <label> لێگەریان :</label>
+        <input
+          type="text"
+          id="searchInput"
+          placeholder=" کودێ ویلی, رەنگ, یان قەبارەی بنڤیسە"
+          onkeyup="searchWheels()"
+        />
+    </div>
+
+    <table id="wheelTable" class="styled-table">
+        <thead>
+          <tr>
+            <th>🔢 کودێ ویل</th>
+            <th>🎨 رەنگ</th>
+            <th>📏 قەبارە</th>
+            <th>💰 بهایە کرینێ</th>
+            <th>💵 بهایە فروتنێ</th>
+            <th>📦 ژمارە</th>
+            <th>⚙️ کار</th>
+          </tr>
+        </thead>
+        <tbody id="wheelList">
+          <!-- Wheel rows will be inserted here by JS -->
+        </tbody>
+    </table>
+      
+    <script>
+        // Firebase Config (update with your keys)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
+            authDomain: "edirsbarwari-7723e.firebaseapp.com",
+            databaseURL: "https://edirsbarwari-7723e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "edirsbarwari-7723e",
+            storageBucket: "edirsbarwari-7723e.firebasestorage.app",
+            messagingSenderId: "1098821018295",
+            appId: "1:1098821018295:web:06b1d698b6d0b43b226332",
+            measurementId: "G-818MFB3X5H"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let wheelsData = [];
+
+        function saveWheel() {
+            const code = document.getElementById("wheelCode").value.trim();
+            const color = document.getElementById("wheelColor").value.trim();
+            const size = document.getElementById("wheelSize").value.trim();
+            const buy = document.getElementById("buyAmount").value.trim();
+            const sell = document.getElementById("sellAmount").value.trim();
+            const quantity = document.getElementById("quantity").value.trim();
+
+            if (code && color && size && buy && sell && quantity) {
+                db.ref("wheels").push({
+                    code,
+                    color,
+                    size,
+                    buy: parseFloat(buy),
+                    sell: parseFloat(sell),
+                    quantity: parseInt(quantity)
+                }).then(() => {
+                    alert("ویل ب سەرکەفتیانە هاتە زێدەکرن!");
+                    clearInputs();
+                    loadWheels();
+                }).catch(error => console.error("Error:", error));
+            } else {
+                alert("پێدفیە هەمی خانەیان تژی بکەی!");
+            }
+        }
+
+        function clearInputs() {
+            document.getElementById("wheelCode").value = "";
+            document.getElementById("wheelColor").value = "";
+            document.getElementById("wheelSize").value = "";
+            document.getElementById("buyAmount").value = "";
+            document.getElementById("sellAmount").value = "";
+            document.getElementById("quantity").value = "";
+        }
+
+
+        function loadWheels() {
+    const wheelList = document.getElementById("wheelList");
+    if (!wheelList) return;  // Safety check
+
+    wheelList.innerHTML = "";
+    wheelsData = [];
+
+    // Reset totals BEFORE listening to data snapshot
+    let totalBuy = 0;
+    let totalSell = 0;
+
+    db.ref("wheels").on("value", snapshot => {
+        wheelList.innerHTML = "";
+        wheelsData = [];
+
+        // Reset totals again inside the snapshot listener
+        totalBuy = 0;
+        totalSell = 0;
+
+        // Gather all wheels in an array first
+        let wheelsArray = [];
+
+        snapshot.forEach(childSnapshot => {
+            const key = childSnapshot.key;
+            const data = childSnapshot.val();
+
+            wheelsArray.push({ key, ...data });
+        });
+
+        // Sort wheels by numeric size ascending
+        wheelsArray.sort((a, b) => {
+            const aSize = parseInt(a.size) || 0;
+            const bSize = parseInt(b.size) || 0;
+            return aSize - bSize;
+        });
+
+        // Now render sorted wheels and calculate totals
+        wheelsArray.forEach(wheel => {
+            wheelsData.push(wheel);
+
+            totalBuy += (parseFloat(wheel.buy) || 0) * (parseInt(wheel.quantity) || 0);
+            totalSell += (parseFloat(wheel.sell) || 0) * (parseInt(wheel.quantity) || 0);
+
+            createWheelItem(wheel.key, wheel, wheelList);
+        });
+
+        // Update totals section and Firebase
+        if (wheelsData.length > 0) {
+            const totalsSection = document.getElementById("totalsSection");
+            if (totalsSection) totalsSection.style.display = "flex";
+
+            const totalBuyElem = document.getElementById("totalBuy");
+            if (totalBuyElem) totalBuyElem.innerText = totalBuy.toLocaleString();
+
+            const totalSellElem = document.getElementById("totalSell");
+            if (totalSellElem) totalSellElem.innerText = totalSell.toLocaleString();
+
+            // Update Firebase totals for wheels
+            db.ref("totals/wheels").set({
+                totalBuy: totalBuy,
+                totalSell: totalSell
+            });
+        } else {
+            const totalsSection = document.getElementById("totalsSection");
+            if (totalsSection) totalsSection.style.display = "none";
+
+            // Clear totals in Firebase when no wheels left
+            db.ref("totals/wheels").set({
+                totalBuy: 0,
+                totalSell: 0
+            });
+        }
+    });
+}
+
+
+function createWheelItem(key, data, container) {
+  const row = document.createElement("tr");
+  row.id = `wheel-${key}`;
+
+  row.innerHTML = `
+    <td id="code-${key}">${data.code || '-'}</td>
+    <td id="color-${key}">${data.color || '-'}</td>
+    <td id="size-${key}">${data.size || '-'}</td>
+    <td id="buy-${key}">${parseFloat(data.buy || 0).toLocaleString()}</td>
+    <td id="sell-${key}">${parseFloat(data.sell || 0).toLocaleString()}</td>
+    <td id="quantity-${key}">${parseInt(data.quantity || 0)}</td>
+    <td>
+      <button class="edit-btn" id="editBtn-${key}">✏️</button>
+      <button class="delete-btn" id="deleteBtn-${key}">🗑</button>
+    </td>
+  `;
+
+  container.appendChild(row);
+
+  // Attach event handlers
+  document.getElementById(`editBtn-${key}`).onclick = () => editWheel(key);
+  document.getElementById(`deleteBtn-${key}`).onclick = () => deleteWheel(key);
+}
+
+
+function editWheel(key) {
+    const wheel = wheelsData.find(w => w.key === key);
+    if (!wheel) return;
+
+    // Replace text with input fields
+    document.getElementById(`code-${key}`).innerHTML = `<input type="text" id="editCode-${key}" value="${wheel.code}" />`;
+    document.getElementById(`color-${key}`).innerHTML = `<input type="text" id="editColor-${key}" value="${wheel.color}" />`;
+    document.getElementById(`size-${key}`).innerHTML = `<input type="text" id="editSize-${key}" value="${wheel.size}" />`;
+    document.getElementById(`buy-${key}`).innerHTML = `<input type="number" id="editBuy-${key}" value="${wheel.buy}" />`;
+    document.getElementById(`sell-${key}`).innerHTML = `<input type="number" id="editSell-${key}" value="${wheel.sell}" />`;
+    document.getElementById(`quantity-${key}`).innerHTML = `<input type="number" id="editQuantity-${key}" value="${wheel.quantity}" />`;
+
+    // Change only this item's buttons
+    const itemContainer = document.getElementById(`wheel-${key}`);
+    const editBtn = itemContainer.querySelector(".edit-btn");
+    const deleteBtn = itemContainer.querySelector(".delete-btn");
+
+    editBtn.innerHTML = '<i class="fas fa-save"></i>';
+    editBtn.onclick = () => saveEditWheel(key);
+
+    deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+    deleteBtn.onclick = () => loadWheels();
+}
+
+        function saveEditWheel(key) {
+            const code = document.getElementById(`editCode-${key}`).value.trim();
+            const color = document.getElementById(`editColor-${key}`).value.trim();
+            const size = document.getElementById(`editSize-${key}`).value.trim();
+            const buy = document.getElementById(`editBuy-${key}`).value.trim();
+            const sell = document.getElementById(`editSell-${key}`).value.trim();
+            const quantity = document.getElementById(`editQuantity-${key}`).value.trim();
+
+            if (code && color && size && buy && sell && quantity) {
+                db.ref("wheels").child(key).update({
+                    code,
+                    color,
+                    size,
+                    buy: parseFloat(buy),
+                    sell: parseFloat(sell),
+                    quantity: parseInt(quantity)
+                }).then(() => {
+                    alert(" ویل ب سەرکەفتیانە هاتە نیکرن!");
+                    loadWheels();
+                }).catch(error => console.error("Error:", error));
+            } else {
+                alert("پێدفیە هەمی خانەیان تژی بکەی!");
+            }
+        }
+
+        function deleteWheel(key) {
+    if (confirm("تە دفێت ویل بهێتە ژێبرن؟")) {
+        const wheelRef = db.ref("wheels").child(key);
+        const totalsRef = db.ref("totals/wheels");
+
+        wheelRef.once("value").then(snapshot => {
+            const wheel = snapshot.val();
+            if (!wheel) {
+                alert("ویل نە هاتە دیتن");
+                throw new Error("Wheel not found");
+            }
+
+            const buyPrice = Number(wheel.buyPrice) || 0;
+            const sellPrice = Number(wheel.sellPrice) || 0;
+
+            console.log("Deleting wheel with:", { buyPrice, sellPrice });
+
+            return totalsRef.transaction(current => {
+                if (current === null) {
+                    // totals/wheels doesn't exist
+                    return null; // abort transaction
+                }
+
+                current.totalBuy = (current.totalBuy || 0) - buyPrice;
+                current.totalSell = (current.totalSell || 0) - sellPrice;
+
+                // Optional: Ensure they don’t go negative
+                if (current.totalBuy < 0) current.totalBuy = 0;
+                if (current.totalSell < 0) current.totalSell = 0;
+
+                return current;
+            }).then(result => {
+                if (!result.committed) {
+                    throw new Error("Transaction failed or totals/wheels does not exist.");
+                }
+                // After updating totals, delete the wheel
+                return wheelRef.remove();
+            });
+        }).then(() => {
+            alert(" ویل ب سەرکەفتیانە هاتە ژێبرن");
+            loadWheels();
+        }).catch(error => {
+            console.error("Error deleting wheel:", error);
+            alert("ئاریشەک درست بو لدەمێ ژێبرنێ");
+        });
+    }
+    }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        function searchWheels() {
+            const searchValue = document.getElementById("searchInput").value.trim().toLowerCase();
+            const wheelList = document.getElementById("wheelList");
+            wheelList.innerHTML = "";
+
+            if (!searchValue) {
+                wheelsData.forEach(wheel => createWheelItem(wheel.key, wheel, wheelList));
+                return;
+            }
+
+            const filtered = wheelsData.filter(wheel =>
+                wheel.code.toLowerCase().includes(searchValue) ||
+                wheel.color.toLowerCase().includes(searchValue) ||
+                wheel.size.toLowerCase().includes(searchValue)
+            );
+
+            filtered.forEach(wheel => createWheelItem(wheel.key, wheel, wheelList));
+        }
+
+        window.onload = function() {
+            loadWheels();
+        };
+    </script>
+</body>
+</html>

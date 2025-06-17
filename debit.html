@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>قەرز</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            direction: rtl;
+            text-align: right;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            background: white;
+            padding: 20px;
+            margin: auto;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 93%;
+            padding: 10px;
+            padding-right: 35px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .btn-save, .btn-back {
+            width: 100%;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .btn-save i, .btn-back i {
+            margin-left: 10px;
+        }
+        .btn-save:hover, .btn-back:hover {
+            background: #34495e;
+        }
+        .search-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .search-container input {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        .grid-container {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .grid-item {
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: right;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        .btn-edit, .btn-delete {
+            background: white;
+            color: #2c3e50;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        .btn-edit:hover, .btn-delete:hover {
+            background: #ddd;
+        }
+
+        .btn-edit, .btn-delete {
+    background: #fff;
+    color: #2c3e50;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 5px;
+    margin-right: 10px;
+}
+
+.btn-edit:hover {
+    background: #e67e22;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #e74c3c;
+    color: white;
+}
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>لیستا دەینان</h2>
+        <br>
+        <h3 id="totalDebitAmount">  $ بهایێ گشتیێ دەینان: 0 💵</h3>
+
+    <br><br>
+
+        <div class="form-group">
+            <label for="debtorName">نافیێ دەینداری:</label>
+            <input type="text" id="debtorName">
+        </div>
+
+        <div class="form-group">
+            <label for="mobileNumber">ژمارا موبایلێ:</label>
+            <input type="text" id="mobileNumber">
+        </div>
+
+        <div class="form-group">
+            <label for="debitDate">مێژویا دەینی:</label>
+            <input type="date" id="debitDate">
+        </div>
+        
+        <div class="form-group">
+            <label for="stockDetails">جورێ کەلوپەلا:</label>
+            <textarea id="stockDetails" rows="4" style="width: 93%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="totalDebit">بهایێ گشتیێ دەینی:</label>
+            <input type="number" id="totalDebit" oninput="calculateDebitLeft()">
+        </div>
+
+        <div class="form-group">
+            <label for="debitPaid">بهایێ وەرگرتی:</label>
+            <input type="number" id="debitPaid" oninput="calculateDebitLeft()">
+        </div>
+
+        <div class="form-group">
+            <label for="debitLeft">بهایێ مای:</label>
+            <input type="number" id="debitLeft" readonly>
+        </div>
+
+        <button class="btn-save" onclick="saveDebit()">
+            <i class="fas fa-save"></i> تومارکرن
+        </button>
+
+        <button class="btn-back" onclick="window.location.href='dashboard.html'">
+            <i class="fas fa-arrow-left"></i>زڤرین بو لیستا زانیاریان
+        </button>
+    </div>
+
+    <div class="search-container">
+        <label>لێگەریان:</label>
+        <input type="text" id="searchInput" placeholder="لێگەریان ل دیڤ نافی یان ژمارا موبایلێ" onkeyup="searchDebits()">
+    </div>
+
+
+    <div class="grid-container">
+        <div id="debitList"></div>
+    </div>
+
+    <script>
+        // Firebase Configuration (Replace with your actual Firebase credentials)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
+            authDomain: "edirsbarwari-7723e.firebaseapp.com",
+            databaseURL: "https://edirsbarwari-7723e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "edirsbarwari-7723e",
+            storageBucket: "edirsbarwari-7723e.firebasestorage.app",
+            messagingSenderId: "1098821018295",
+            appId: "1:1098821018295:web:06b1d698b6d0b43b226332",
+            measurementId: "G-818MFB3X5H"
+        };
+    
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+    
+        function saveDebit() {
+    const name = document.getElementById("debtorName").value;
+    const mobile = document.getElementById("mobileNumber").value;
+    const debitDate = document.getElementById("debitDate").value;
+    const stockDetails = document.getElementById("stockDetails").value;
+    const totalDebit = document.getElementById("totalDebit").value;
+    const debitPaid = document.getElementById("debitPaid").value;
+    const debitLeft = document.getElementById("debitLeft").value;
+
+    if (name && mobile && totalDebit && debitDate) {
+        db.ref("debits").push({ name, mobile, debitDate, stockDetails, totalDebit, debitPaid, debitLeft }).then(() => {
+            alert("پێزانین ب سەرکەفتیانە هاتنە تومارکرن!");
+            loadDebits();
+        });
+    } else {
+        alert("پێدڤیە هەمی خانە بهێنە تژیکرن!");
+    }
+}
+
+
+function loadDebits() {
+    db.ref("debits").on("value", snapshot => {
+        document.getElementById("debitList").innerHTML = "";
+        let totalDebit = 0;
+
+        snapshot.forEach(childSnapshot => {
+            const data = childSnapshot.val();
+            const key = childSnapshot.key;  // Get the unique key of each entry
+            totalDebit += parseFloat(data.totalDebit) || 0;
+
+            document.getElementById("debitList").innerHTML += `
+                <div class="grid-item">
+                    نافیێ دەینداری: <strong>${data.name}</strong><br> 
+                    ژمارا موبایلێ: ${data.mobile} <br> 
+                    مێژویا دەینی: ${data.debitDate} <br> 
+                    جورێ کەلوپەلا:  ${data.stockDetails || 'بەتاڵ'} <br>
+                    بهایێ گشتیێ دەینی: $ ${parseFloat(data.totalDebit).toLocaleString()} <br> 
+                    بهایێ وەرگرتی: $ ${parseFloat(data.debitPaid).toLocaleString()}<br>
+                    بهایێ مای: $ ${parseFloat(data.debitLeft).toLocaleString()}<br>
+                    <button class="btn-edit" onclick="editDebit('${key}')">دەستکاری</button>
+                    <button class="btn-delete" onclick="deleteDebit('${key}')">ژێبرن</button>
+                </div>
+                <br>
+            `;
+        });
+
+        // Save the total debit amount in Firebase
+        db.ref("totals/debits").set({
+            totalDebit: totalDebit
+        });
+        
+        // Display the total debit in the current page (debit.html)
+        document.getElementById("totalDebitAmount").innerText = ` بهایێ گشتیێ دەینان: ${totalDebit.toLocaleString()} 💵`;
+    });
+}
+
+
+
+function editDebit(key) {
+    // Fetch the specific debit entry from Firebase using the key
+    db.ref("debits").child(key).once("value", snapshot => {
+        const data = snapshot.val();
+        
+        // Populate the form with the current values of the selected entry
+        document.getElementById("debtorName").value = data.name;
+        document.getElementById("mobileNumber").value = data.mobile;
+        document.getElementById("debitDate").value = data.debitDate;
+        document.getElementById("stockDetails").value = data.stockDetails;
+        document.getElementById("totalDebit").value = data.totalDebit;
+        document.getElementById("debitPaid").value = data.debitPaid;
+        document.getElementById("debitLeft").value = data.debitLeft;
+        
+        // Update the save button to handle updating the debit entry
+        const saveButton = document.querySelector(".btn-save");
+        saveButton.setAttribute("onclick", `updateDebit('${key}')`);
+    });
+}
+
+
+function updateDebit(key) {
+    const name = document.getElementById("debtorName").value;
+    const mobile = document.getElementById("mobileNumber").value;
+    const debitDate = document.getElementById("debitDate").value;
+    const stockDetails = document.getElementById("stockDetails").value;
+    const totalDebit = document.getElementById("totalDebit").value;
+    const debitPaid = document.getElementById("debitPaid").value;
+    const debitLeft = document.getElementById("debitLeft").value;
+
+    if (name && mobile && totalDebit && debitDate) {
+        // Update the specific entry in Firebase
+        db.ref("debits").child(key).update({
+            name,
+            mobile,
+            debitDate,
+            stockDetails,
+            totalDebit,
+            debitPaid,
+            debitLeft
+        }).then(() => {
+            alert("پێزانین ب سەرکەفتیانە هاتنە نیکرن!");
+            loadDebits();
+            resetForm();  // Clear the form
+        });
+    } else {
+        alert("پێدڤیە هەمی خانە بهێنە تژیکرن!");
+    }
+}
+
+function resetForm() {
+    // Reset the form values after saving or updating
+    document.getElementById("debtorName").value = '';
+    document.getElementById("mobileNumber").value = '';
+    document.getElementById("debitDate").value = '';
+    document.getElementById("stockDetails").value = '';
+    document.getElementById("totalDebit").value = '';
+    document.getElementById("debitPaid").value = '';
+    document.getElementById("debitLeft").value = '';
+}
+
+
+function deleteDebit(key) {
+    if (confirm("تە دفێت دەین بهێتە ژێبرن؟")) {
+        db.ref("debits").child(key).remove().then(() => {
+            alert("دەین ب سەرکەفتیانه هاتە ژێبرن!");
+            loadDebits();  // Reload the list
+        });
+    }
+}
+
+
+
+        function calculateDebitLeft() {
+            document.getElementById("debitLeft").value = (parseFloat(document.getElementById("totalDebit").value) || 0) - (parseFloat(document.getElementById("debitPaid").value) || 0);
+        }
+
+        window.onload = loadDebits;
+    </script>
+
+</body>
+</html>
+ 

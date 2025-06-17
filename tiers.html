@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>لیستا تایەران</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            direction: rtl;
+            text-align: right;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            background: white;
+            padding: 20px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 93%;
+            padding: 10px;
+            padding-right: 35px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .icon {
+            position: absolute;
+            right: 10px;
+            top: 40px;
+            color: gray;
+        }
+        .btn-save, .btn-back {
+            width: 100%;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .btn-save i, .btn-back i {
+            margin-left: 10px;
+        }
+        .btn-save:hover, .btn-back:hover {
+            background: #34495e;
+        }
+        /* Search Bar */
+        .search-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .search-container input {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        /* Grid Container */
+        .grid-container {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-height: 800px;
+            overflow-y: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            text-align: center;
+        }
+        .grid-item {
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: right;
+            font-size: 20px;
+            line-height: 1.5;
+        }
+        /* Updated buttons style */
+        .grid-item button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            margin-left: 8px;
+            padding: 6px 8px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            color: white;
+        }
+        .grid-item button.edit-btn {
+            color: #4caf50; /* green */
+        }
+        .grid-item button.edit-btn:hover {
+            background-color: #4caf5077;
+        }
+        .grid-item button.delete-btn {
+            color: #e74c3c; /* red */
+        }
+        .grid-item button.delete-btn:hover {
+            background-color: #e74c3c77;
+        }
+        /* Totals section */
+        .totals {
+            margin-top: 15px;
+            background: #2c3e50;
+            color: white;
+            font-weight: bold;
+            padding: 15px 20px;
+            border-radius: 8px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+        }
+        .totals span {
+            display: inline-block;
+            min-width: 150px;
+        }
+        .styled-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+          font-family: Arial, sans-serif;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .styled-table th, .styled-table td {
+          padding: 12px 15px;
+          border: 1px solid #ddd;
+          text-align: center;
+        }
+
+.styled-table th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+}
+
+.styled-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.btn-table.edit {
+  padding: 5px 8px;
+  margin: 0 2px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-table.delete {
+  padding: 5px 8px;
+  margin: 0 2px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #f44336;
+  color: white;
+}
+    </style>
+</head>
+<body>
+        <!-- Totals displayed here -->
+        <div class="totals" id="totalsSection" style="display:none;">
+            <span>بهایێ کرینا تایران : $ <span id="totalBuy">0</span></span>
+            <span>بهایێ فروتنا تایران : $ <span id="totalSell">0</span></span>
+        </div>
+
+        <br><br><br>
+
+    <div class="container">
+        <h2> لیستا تایەران</h2>
+
+        <div class="form-group">
+            <label for="tierName">نافێ تایرێ:</label>
+            <input type="text" id="tierName" />
+            <i class="fas fa-tag icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="tierData">مێژویا تایرێ:</label>
+            <input type="text" id="tierData" maxlength="4" pattern="\d{4}" placeholder="1234" />
+            <i class="fas fa-hashtag icon"></i>
+        </div>
+        
+
+        <div class="form-group">
+            <label for="tierSize">قەبارێ تایرێ:</label>
+            <input type="text" id="tierSize" />
+            <i class="fas fa-ruler-horizontal icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="buyPrice">بهایێ کرینێ:</label>
+            <input type="number" id="buyPrice"  />
+            <i class="fas fa-dollar-sign icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="sellPrice">بهایێ فروتنێ:</label>
+            <input type="number" id="sellPrice"/>
+            <i class="fas fa-dollar-sign icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="quantity"> ژمارە:</label>
+            <input type="number" id="quantity" />
+            <i class="fas fa-boxes icon"></i>
+        </div>
+
+        <button class="btn-save" onclick="saveTier()">
+            <i class="fas fa-save"></i>  تومارکان 
+        </button>
+
+        <button class="btn-back" onclick="goBack()">
+            <i class="fas fa-arrow-right"></i>زفرین بو لیستا سەرەکی
+        </button>
+    </div>
+
+    <div class="search-container">
+        <label> لێگەریان :</label>
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="نافێ تایرێ"
+          onkeyup="searchTiers()"
+        />
+    </div>
+
+    <table id="tierTable" class="styled-table">
+        <thead>
+          <tr>
+            <th>🛞 ناڤ</th>
+            <th>📅 مێژوو</th>
+            <th>📏 قەبارە</th>
+            <th>💰 بهایە کرینێ</th>
+            <th>💵 بهایە فروتنێ</th>
+            <th>📦 ژمارە</th>
+            <th>⚙️ کار</th>
+          </tr>
+        </thead>
+        <tbody id="tierList">
+          <!-- Rows will be added here -->
+        </tbody>
+      </table>
+      
+
+    <script>
+        // Firebase Config (same as your wheels file)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
+            authDomain: "edirsbarwari-7723e.firebaseapp.com",
+            databaseURL: "https://edirsbarwari-7723e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "edirsbarwari-7723e",
+            storageBucket: "edirsbarwari-7723e.firebasestorage.app",
+            messagingSenderId: "1098821018295",
+            appId: "1:1098821018295:web:06b1d698b6d0b43b226332",
+            measurementId: "G-818MFB3X5H"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let tiersData = [];
+
+        function saveTier() {
+            const name = document.getElementById("tierName").value.trim();
+            const data = document.getElementById("tierData").value.trim();
+            const size = document.getElementById("tierSize").value.trim();
+            const buy = document.getElementById("buyPrice").value.trim();
+            const sell = document.getElementById("sellPrice").value.trim();
+            const quantity = document.getElementById("quantity").value.trim();
+
+            if (!/^\d{4}$/.test(data)) {
+    alert("پێدفیە مێژویا تایرێ 4 ژمارە بن!");
+    return;
+}
+
+
+            if (name && data && size && buy && sell && quantity) {
+                db.ref("tiers").push({
+                    name,
+                    data,
+                    size,
+                    buy: parseFloat(buy),
+                    sell: parseFloat(sell),
+                    quantity: parseInt(quantity)
+                }).then(() => {
+                    alert("تایرە ب سەرکەفتیانە هاتە زێدەکرن!");
+                    clearInputs();
+                    loadTiers();
+                }).catch(error => console.error("Error:", error));
+            } else {
+                alert("پێدفیە هەمی خانەیان تژی بکەی!");
+            }
+        }
+
+        function clearInputs() {
+            document.getElementById("tierName").value = "";
+            document.getElementById("tierData").value = "";
+            document.getElementById("tierSize").value = "";
+            document.getElementById("buyPrice").value = "";
+            document.getElementById("sellPrice").value = "";
+            document.getElementById("quantity").value = "";
+        }
+
+
+
+        function parseTireSize(sizeStr) {
+  if (!sizeStr) return [0, 0, 0];
+  const parts = sizeStr.split("/").map(Number);
+  return parts.length === 3 ? parts : [0, 0, 0];
+}
+
+function loadTiers() {
+  const tierList = document.getElementById("tierList");
+  if (!tierList) return;
+
+  tierList.innerHTML = "";
+  tiersData = [];
+
+  let totalBuy = 0;
+  let totalSell = 0;
+
+  db.ref("tiers").on("value", snapshot => {
+    tiersData = [];
+
+    totalBuy = 0;
+    totalSell = 0;
+
+    snapshot.forEach(childSnapshot => {
+      const key = childSnapshot.key;
+      const data = childSnapshot.val();
+
+      tiersData.push({ key, ...data });
+
+      totalBuy += (parseFloat(data.buy) || 0) * (parseInt(data.quantity) || 0);
+      totalSell += (parseFloat(data.sell) || 0) * (parseInt(data.quantity) || 0);
+    });
+
+    // Sort by size
+    tiersData.sort((a, b) => {
+      const sizeA = parseTireSize(a.size);
+      const sizeB = parseTireSize(b.size);
+
+      if (sizeA[0] !== sizeB[0]) return sizeA[0] - sizeB[0];
+      if (sizeA[1] !== sizeB[1]) return sizeA[1] - sizeB[1];
+      return sizeA[2] - sizeB[2];
+    });
+
+    tierList.innerHTML = ""; // clear again
+
+    tiersData.forEach(({key, ...data}) => {
+      createTierItem(key, data, tierList);
+    });
+
+    const totalsSection = document.getElementById("totalsSection");
+if (totalsSection) {
+  if (tiersData.length > 0) {
+    totalsSection.style.display = "block"; // or "flex" as you like
+    document.getElementById("totalBuy").innerText = totalBuy.toLocaleString();
+    document.getElementById("totalSell").innerText = totalSell.toLocaleString();
+
+    // Optionally update Firebase totals
+    db.ref("totals/tiers").set({
+      totalBuy: totalBuy,
+      totalSell: totalSell
+    });
+  } else {
+    totalsSection.style.display = "none";
+    db.ref("totals/tiers").set({
+      totalBuy: 0,
+      totalSell: 0
+    });
+  }
+}
+
+  });
+}
+
+
+function createTierItem(key, data, container) {
+  const row = document.createElement("tr");
+  row.id = `tier-row-${key}`;  // 🔴 This is required for editTier() to work
+
+  row.innerHTML = `
+    <td id="name-${key}">${data.name}</td>
+    <td id="data-${key}">${data.data}</td>
+    <td id="size-${key}">${data.size || '-'}</td>
+    <td id="buy-${key}">${parseFloat(data.buy).toLocaleString()} $</td>
+    <td id="sell-${key}">${parseFloat(data.sell).toLocaleString()} $</td>
+    <td id="quantity-${key}">${parseInt(data.quantity)}</td>
+    <td>
+      <button class="btn-table edit" onclick="editTier('${key}')">✏️</button>
+      <button class="btn-table delete" onclick="deleteTier('${key}')">🗑</button>
+    </td>
+  `;
+
+  container.appendChild(row);
+}
+
+
+
+function editTier(key) {
+  const row = document.getElementById(`tier-row-${key}`);
+  const tier = tiersData.find(t => t.key === key);
+  if (!tier) return alert("ئەف جورێ تایرێ نە هاتە دیتن!");
+
+  row.innerHTML = `
+    <td><input type="text" id="editName-${key}" value="${tier.name}" /></td>
+    <td><input type="text" id="editData-${key}" maxlength="4" pattern="\\d{4}" value="${tier.data}" /></td>
+    <td><input type="text" id="editSize-${key}" value="${tier.size || ''}" /></td>
+    <td><input type="number" id="editBuy-${key}" value="${tier.buy}" /></td>
+    <td><input type="number" id="editSell-${key}" value="${tier.sell}" /></td>
+    <td><input type="number" id="editQuantity-${key}" value="${tier.quantity}" /></td>
+    <td>
+      <button class="btn-table save" onclick="saveEditTier('${key}')">✅</button>
+      <button class="btn-table cancel" onclick="loadTiers()">✖️</button>
+    </td>
+  `;
+}
+
+
+function saveEditTier(key) {
+  const name = document.getElementById(`editName-${key}`).value.trim();
+  const data = document.getElementById(`editData-${key}`).value.trim();
+  const size = document.getElementById(`editSize-${key}`).value.trim();
+  const buy = document.getElementById(`editBuy-${key}`).value.trim();
+  const sell = document.getElementById(`editSell-${key}`).value.trim();
+  const quantity = document.getElementById(`editQuantity-${key}`).value.trim();
+
+  if (!/^\d{4}$/.test(data)) {
+    alert("پێدفیە مێژویا تایرێ 4 ژمارە بن!");
+    return;
+  }
+
+  if (name && data && size && buy && sell && quantity) {
+    db.ref("tiers").child(key).update({
+      name,
+      data,
+      size,
+      buy: parseFloat(buy),
+      sell: parseFloat(sell),
+      quantity: parseInt(quantity)
+    }).then(() => {
+      alert("✅ تایرە ب سەرکەفتیانە هاتە نیکرن");
+      loadTiers();
+    }).catch(error => console.error("Error updating tier:", error));
+  } else {
+    alert("پێدفیە هەمی خانەیان تژی بکەی!");
+  }
+}
+        function deleteTier(key) {
+            if (confirm("تە دفێت تایرە بهێتە ژێبرن?")) {
+                db.ref("tiers").child(key).remove()
+                    .then(() => {
+                        alert("تایرە ب سەرکەفتیانە هاتە ژێبرن");
+                        loadTiers();
+                    })
+                    .catch(error => console.error("Error:", error));
+            }
+        }
+
+        function searchTiers() {
+            const query = document.getElementById("searchInput").value.trim().toLowerCase();
+            const tierList = document.getElementById("tierList");
+            tierList.innerHTML = "";
+
+            let filteredTiers = tiersData.filter(tier => tier.name.toLowerCase().includes(query));
+            if(filteredTiers.length === 0){
+                tierList.innerHTML = "<p>ئەف جورێ تایرێ نە هاتە دیتن.</p>";
+                document.getElementById("totalsSection").style.display = "none";
+                return;
+            }
+
+            let totalBuy = 0;
+            let totalSell = 0;
+
+            filteredTiers.forEach(({key, ...data}) => {
+                createTierItem(key, data, tierList);
+                totalBuy += (parseFloat(data.buy) || 0) * (parseInt(data.quantity) || 0);
+                totalSell += (parseFloat(data.sell) || 0) * (parseInt(data.quantity) || 0);
+            });
+
+            document.getElementById("totalsSection").style.display = "flex";
+            document.getElementById("totalBuy").innerText = totalBuy.toLocaleString();
+            document.getElementById("totalSell").innerText = totalSell.toLocaleString();
+        }
+
+        function goBack() {
+            window.location.href = "dashboard.html";
+        }
+
+        // Initial load
+        loadTiers();
+    </script>
+</body>
+</html>

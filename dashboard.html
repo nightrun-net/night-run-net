@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - داشبۆرد</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            direction: rtl;
+            height: 100vh;
+            overflow-x: hidden;
+        }
+        .navbar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            height: 100vh;
+            padding-top: 20px;
+            position: fixed;
+            right: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .navbar h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .navbar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .navbar ul li {
+            padding: 15px;
+            text-align: right;
+            cursor: pointer;
+        }
+        .navbar ul li a {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            font-size: 20px;
+        }
+        .navbar ul li a i {
+            margin-left: 15px;
+            font-size: 18px;
+        }
+        .navbar ul li:hover, .navbar ul li.active {
+            background: #34495e;
+        }
+        .content {
+            margin-right: 260px;
+            padding: 20px;
+            flex-grow: 1;
+            text-align: right;
+            transition: margin-right 0.3s ease;
+            width: 100%;
+        }
+        .menu-toggle {
+            display: none;
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: white;
+            z-index: 1000;
+        }
+        @media (max-width: 768px) {
+            .navbar {
+                width: 200px;
+                right: -220px;
+            }
+            .content {
+                margin-right: 0;
+            }
+            .menu-toggle {
+                display: block;
+                background: #2c3e50;
+                padding: 10px;
+                border-radius: 5px;
+            }
+            .navbar.active {
+                right: 0;
+            }
+            .content.shifted {
+                margin-right: 210px;
+            }
+        }
+
+        /* Dashboard Sections */
+        .dashboard-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .section {
+            width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+        }
+        .section:hover {
+            background: #ddd;
+        }
+        .section h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .totals {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        .icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .total-buy {
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 20px;
+        }
+.low-stock-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+    text-align: center;
+}
+
+.btn-low-stock {
+    width: 300px;
+    background: #2c3e50;
+    color: white;
+    padding: 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    direction: rtl;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: background 0.3s ease;
+    text-align: center;
+}
+
+.btn-low-stock:hover {
+    background: #34495e;
+}
+
+.low-stock-details {
+    margin-top: 15px;
+    font-size: 18px;
+    color: #ecf0f1;
+}
+
+.low-stock-details div {
+    margin: 6px 0;
+    color: black;
+    font-size: 20px;
+}
+
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h2>لیست</h2>
+        <ul>
+            <li class="active"> <a href="wheels.html">لیستا ویلان</a> </li>
+            <li><a href="tiers.html">لیستا تایران</a></li>
+            <li><a href="battery.html">لیستا پاتریان</a></li>
+            <li><a href="sales.html">لیستا فروتنا ویل و تایران</a></li>
+            <li><a href="batterysale.html">لیستا فروتنا پاتریان</a></li>
+            <li><a href="debit.html">لیستا دەینان</a></li>
+            <li><a href="low-stock.html">لیستا کێمبویان</a></li>
+            <li><a href="profile.html">پرۆفایل</a></li>
+        </ul>
+    </div>
+    
+
+    <div class="menu-toggle"><i class="fas fa-bars"></i></div>
+
+    <div class="content">
+        <h1>خیێرهاتن بو داشبوردی</h1>
+        <br>
+        <div class="dashboard-container">
+            <!-- Wheels Section -->
+            <div class="section" onclick="window.location.href='wheels.html'">
+                <i class="fas fa-car icon"></i>
+                <h3>لیستا ویلان</h3>
+                <p id="wheelsTotalBuy" class="totals">  هژمارا بهایێ کرینێ: 0 💰</p>
+                <p id="wheelsTotalSell" class="totals">  هژمارا بهایێ فروتنێ: 0 💵</p>
+            </div>
+
+            <!-- Tiers Section -->
+            <div class="section" onclick="window.location.href='tiers.html'">
+                <i class="fas fa-dot-circle icon"></i>
+                <h3>لیستا تایران</h3>
+                <p id="tiersTotalBuy" class="totals">  هژمارا بهایێ کرینێ: 0 💰</p>
+                <p id="tiersTotalSell" class="totals">  هژمارا بهایێ فروتنێ: 0 💵</p>
+            </div>
+
+            <!-- Battery Section -->
+            <div class="section" onclick="window.location.href='battery.html'">
+                <i class="fas fa-battery-full icon"></i>
+                <h3>لیستا پاتریان</h3>
+                <p id="batteryTotalBuy" class="totals">  هژمارا بهایێ کرینێ: 0 💰</p>
+                <p id="batteryTotalSell" class="totals">  هژمارا بهایێ فروتنێ: 0 💵</p>
+            </div>
+
+            <!-- Total Sales Section -->
+            <div class="section" onclick="window.location.href='sales.html'">
+                <i class="fas fa-chart-line icon"></i>
+                <h3>لیستا فروتنا ویل و تایران</h3>
+                <div id="totalSalesLabel">💵 هژمارا بهایێ فروتنێ: 0 $</div>
+            </div>
+
+            <!-- Battery Sale Section -->
+            <div class="section" onclick="window.location.href='batterysale.html'">
+                <i class="fas fa-bolt icon"></i>
+                <h3>لیستا فروتنا پاتریان</h3>
+                <div id="batteryTotalSoldCost">💸 هژمارا بهایێ فروتنێ: 0 💵</div>
+            </div>
+
+            <!-- Total Debit Section in Dashboard -->
+            <div class="section" onclick="window.location.href='debit.html'">
+                <i class="fas fa-money-bill-wave icon"></i>
+                <h3>لیستا دەینان</h3>
+                <div id="debitTotal" class="totals">💵 کۆی قەرز: 0 💸</div>
+            </div>
+
+            <!-- Low Stock Section -->
+            <div class="section" onclick="window.location.href='low-stock.html'">
+                <i class="fas fa-exclamation-triangle icon" style="color: red;"></i>
+                <h3> 📦 لیستا کێمبویان</h3>
+                <div id="lowStockDetails" class="low-stock-details">
+                    <div><strong>ویل:</strong> <span id="lowWheels">0</span></div>
+                    <div><strong>تایر:</strong> <span id="lowTiers">0</span></div>
+                    <div><strong>پاتری:</strong> <span id="lowBatteries">0</span></div>
+                </div>
+            </div>
+
+            <!-- Profile Section -->
+            <div class="section" onclick="window.location.href='profile.html'">
+                <i class="fas fa-user icon"></i>
+                <h3>پرۆفایل</h3>
+                <p>🔧 دەستکاری کرن ب زانیاریێت بکارهێنەری</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
+            authDomain: "edirsbarwari-7723e.firebaseapp.com",
+            databaseURL: "https://edirsbarwari-7723e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "edirsbarwari-7723e",
+            storageBucket: "edirsbarwari-7723e.firebasestorage.app",
+            messagingSenderId: "1098821018295",
+            appId: "1:1098821018295:web:06b1d698b6d0b43b226332",
+            measurementId: "G-818MFB3X5H"
+        };
+    
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Sidebar Navigation Toggle for Mobile
+        document.addEventListener("DOMContentLoaded", function () {
+            const navbar = document.querySelector(".navbar");
+            const menuToggle = document.querySelector(".menu-toggle");
+            const content = document.querySelector(".content");
+    
+            menuToggle.addEventListener("click", function () {
+                navbar.classList.toggle("active");
+                content.classList.toggle("shifted");
+            });
+    
+            // Store active menu item
+            const menuItems = document.querySelectorAll(".navbar ul li");
+            menuItems.forEach(item => {
+                item.addEventListener("click", function () {
+                    menuItems.forEach(i => i.classList.remove("active"));
+                    this.classList.add("active");
+                    localStorage.setItem("activeMenu", this.innerHTML);
+                });
+            });
+    
+            // Load active menu item
+            let activeMenu = localStorage.getItem("activeMenu");
+            if (activeMenu) {
+                menuItems.forEach(item => {
+                    if (item.innerHTML === activeMenu) {
+                        item.classList.add("active");
+                    }
+                });
+            }
+        });
+        function loadTotals() {
+    // Wheels totals
+    db.ref("totals/wheels").on("value", snapshot => {
+        const totals = snapshot.val();
+        if (totals) {
+            document.getElementById("wheelsTotalBuy").innerText = ` هژمارا بهایێ کرینێ ویل: ${totals.totalBuy?.toLocaleString() || 0} 💰`;
+            document.getElementById("wheelsTotalSell").innerText = ` هژمارا بهایێ فروتنێ ویل: ${totals.totalSell?.toLocaleString() || 0} 💵`;
+        } else {
+            document.getElementById("wheelsTotalBuy").innerText = ` هژمارا بهایێ کرینێ ویل: 0 💰`;
+            document.getElementById("wheelsTotalSell").innerText = ` هژمارا بهایێ فروتنێ ویل: 0 💵`;
+        }
+    });
+
+    // Tiers totals (repeat same pattern)
+    db.ref("totals/tiers").on("value", snapshot => {
+        const totals = snapshot.val();
+        if (totals) {
+            document.getElementById("tiersTotalBuy").innerText = ` هژمارا بهایێ کرینێ تایەر: ${totals.totalBuy?.toLocaleString() || 0} 💰`;
+            document.getElementById("tiersTotalSell").innerText = ` هژمارا بهایێ فروتنێ تایەر: ${totals.totalSell?.toLocaleString() || 0} 💵`;
+        } else {
+            document.getElementById("tiersTotalBuy").innerText = ` هژمارا بهایێ کرینێ تایەر: 0 💰`;
+            document.getElementById("tiersTotalSell").innerText = ` هژمارا بهایێ فروتنێ تایەر: 0 💵`;
+        }
+    });
+
+    // Batteries totals
+    db.ref("totals/batteries").on("value", snapshot => {
+        const totals = snapshot.val();
+        if (totals) {
+            document.getElementById("batteryTotalBuy").innerText = ` هژمارا بهایێ کرینێ باتەری: ${totals.totalBuy?.toLocaleString() || 0} 💰`;
+            document.getElementById("batteryTotalSell").innerText = ` هژمارا بهایێ فروتنێ باتەری: ${totals.totalSell?.toLocaleString() || 0} 💵`;
+        } else {
+            document.getElementById("batteryTotalBuy").innerText = ` هژمارا بهایێ کرینێ باتەری: 0 💰`;
+            document.getElementById("batteryTotalSell").innerText = ` هژمارا بهایێ فروتنێ باتەری: 0 💵`;
+        }
+    });
+
+    // Battery sales totals
+    db.ref("totals/batterySales").on("value", snapshot => {
+        const totals = snapshot.val();
+        if (totals) {
+            document.getElementById("batteryTotalSoldCost").innerText = ` 💸 هژمارا بهایێ فروتنێ: ${totals.totalSoldCost?.toLocaleString() || 0} 💵`;
+        } else {
+            document.getElementById("batteryTotalSoldCost").innerText = ` 💸 هژمارا بهایێ فروتنێ: 0 💵`;
+        }
+    });
+
+    // Sales totals
+    db.ref("totals/sales").on("value", snapshot => {
+        const totals = snapshot.val();
+        if (totals) {
+            document.getElementById("totalSalesLabel").innerText = `💵  هژمارا بهایێ فروتنێ : ${totals.totalSold?.toLocaleString() || 0} $`;
+        } else {
+            document.getElementById("totalSalesLabel").innerText = `💵  هژمارا بهایێ فروتنێ : 0 $`;
+        }
+    });
+
+    // Debits totals
+    db.ref("totals/debits").on("value", snapshot => {
+        const totals = snapshot.val();
+        if (totals) {
+            document.getElementById("debitTotal").innerText = `💵  هژمارا دەینان: ${totals.totalDebit?.toLocaleString() || 0} 💸`;
+        } else {
+            document.getElementById("debitTotal").innerText = `💵  هژمارا دەینان: 0 💸`;
+        }
+    });
+}
+
+// Call this once on page load
+window.onload = loadTotals;
+
+
+
+
+    window.onload(loadTotals);
+
+
+    
+
+    async function fetchLowStockCounts() {
+        const thresholds = {
+            wheels: 4,
+            tiers: 4,
+            batteries: 4
+        };
+
+        let counts = {
+            wheels: 0,
+            tiers: 0,
+            batteries: 0
+        };
+
+        // Wheels
+        await db.ref("wheels").once("value", snapshot => {
+            snapshot.forEach(child => {
+                const qty = parseInt(child.val().quantity);
+                if (!isNaN(qty) && qty <= thresholds.wheels) counts.wheels++;
+            });
+        });
+
+        // Tiers
+        await db.ref("tiers").once("value", snapshot => {
+            snapshot.forEach(child => {
+                const qty = parseInt(child.val().quantity);
+                if (!isNaN(qty) && qty <= thresholds.tiers) counts.tiers++;
+            });
+        });
+
+        // Batteries
+        await db.ref("batteries").once("value", snapshot => {
+            snapshot.forEach(child => {
+                const qty = parseInt(child.val().quantity);
+                if (!isNaN(qty) && qty <= thresholds.batteries) counts.batteries++;
+            });
+        });
+
+        updateLowStockDisplay(counts);
+    }
+
+    function updateLowStockDisplay(counts) {
+        document.getElementById("lowWheels").textContent = counts.wheels;
+        document.getElementById("lowTiers").textContent = counts.tiers;
+        document.getElementById("lowBatteries").textContent = counts.batteries;
+    }
+
+    function goToLowStockPage() {
+        window.location.href = "lowStock.html"; // Update with correct path
+    }
+
+    window.onload = fetchLowStockCounts;
+</script>
+
+    
+
+</body>
+</html>

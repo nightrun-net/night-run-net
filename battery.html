@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>لیستا پاتریان</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            direction: rtl;
+            text-align: right;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            background: white;
+            padding: 20px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 93%;
+            padding: 10px;
+            padding-right: 35px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .icon {
+            position: absolute;
+            right: 10px;
+            top: 40px;
+            color: gray;
+        }
+        .btn-save, .btn-back {
+            width: 100%;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .btn-save i, .btn-back i {
+            margin-left: 10px;
+        }
+        .btn-save:hover, .btn-back:hover {
+            background: #34495e;
+        }
+        /* Search Bar */
+        .search-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .search-container input {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        /* Grid Container */
+        .grid-container {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-height: 800px;
+            overflow-y: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            text-align: center;
+        }
+        .grid-item {
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: right;
+            font-size: 20px;
+            line-height: 1.5;
+        }
+        /* Updated buttons style */
+        .grid-item button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            margin-left: 8px;
+            padding: 6px 8px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            color: white;
+        }
+        .grid-item button.edit-btn {
+            color: #4caf50; /* green */
+        }
+        .grid-item button.edit-btn:hover {
+            background-color: #4caf5077;
+        }
+        .grid-item button.delete-btn {
+            color: #e74c3c; /* red */
+        }
+        .grid-item button.delete-btn:hover {
+            background-color: #e74c3c77;
+        }
+        /* Totals section */
+        .totals {
+            margin-top: 15px;
+            background: #2c3e50;
+            color: white;
+            font-weight: bold;
+            padding: 15px 20px;
+            border-radius: 8px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+        }
+        .totals span {
+            display: inline-block;
+            min-width: 150px;
+        }
+
+        .styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.styled-table th, .styled-table td {
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.styled-table th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+}
+
+.styled-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.edit-btn {
+    padding: 5px 8px;
+  margin: 0 2px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+}
+
+.delete-btn {
+    padding: 5px 8px;
+  margin: 0 2px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #f44336;
+  color: white;
+}
+    </style>
+</head>
+<body>
+    <!-- Totals displayed here -->
+    <div class="totals" id="totalsSection" style="display:none;">
+        <span>بهایێ کرینا پاتریان : $ <span id="totalBuy">0</span></span>
+        <span> بهایێ فروتنا پاتریان : $ <span id="totalSell">0</span></span>
+    </div>
+
+    <br><br><br>
+
+    <div class="container">
+        <h2>لیستا پاتریان</h2>
+
+        <div class="form-group">
+            <label for="batteryName">نافێ پاتریێ:</label>
+            <input type="text" id="batteryName"  />
+            <i class="fas fa-battery-full icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="batteryVolt">رێژەیا ڤولتا:</label>
+            <input type="text" id="batteryVolt"  />
+            <i class="fas fa-bolt icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="batteryWarranty">گارانتی:</label>
+            <input type="text" id="batteryWarranty" />
+            <i class="fas fa-shield-alt icon"></i>
+        </div>
+        
+
+        <div class="form-group">
+            <label for="buyPrice">بهایێ کرینێ :</label>
+            <input type="number" id="buyPrice"  />
+            <i class="fas fa-dollar-sign icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="sellPrice">بهایێ فروتنێ :</label>
+            <input type="number" id="sellPrice"  />
+            <i class="fas fa-dollar-sign icon"></i>
+        </div>
+
+        <div class="form-group">
+            <label for="quantity">ژمارە:</label>
+            <input type="number" id="quantity" />
+            <i class="fas fa-boxes icon"></i>
+        </div>
+
+        <button class="btn-save" onclick="saveBattery()">
+            <i class="fas fa-save"></i> تومارکان
+        </button>
+
+        <button class="btn-back" onclick="goBack()">
+            <i class="fas fa-arrow-right"></i>زفرین بو لیستا سەرەکی
+        </button>
+    </div>
+
+   <!-- Search input label changed -->
+<div class="search-container">
+    <label>لێگەریان :</label>
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="ناف یان ڤولت"
+      onkeyup="searchBatteries()"
+    />
+</div>
+
+<table class="styled-table">
+    <thead>
+      <tr>
+        <th>🔋 ناو</th>
+        <th>🔌 ڤۆلت</th>
+        <th>📅 گەرنتی</th>
+        <th>💰 کرین</th>
+        <th>💵 فروتن</th>
+        <th>📦 ژمارە</th>
+        <th>⚙️ کار</th>
+      </tr>
+    </thead>
+    <tbody id="batteryList">
+      <!-- Battery rows go here -->
+    </tbody>
+  </table>
+  
+
+
+    <script>
+        // Firebase Config (same as your tiers file)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
+            authDomain: "edirsbarwari-7723e.firebaseapp.com",
+            databaseURL: "https://edirsbarwari-7723e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "edirsbarwari-7723e",
+            storageBucket: "edirsbarwari-7723e.firebasestorage.app",
+            messagingSenderId: "1098821018295",
+            appId: "1:1098821018295:web:06b1d698b6d0b43b226332",
+            measurementId: "G-818MFB3X5H"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let batteriesData = [];
+
+        function saveBattery() {
+            const name = document.getElementById("batteryName").value.trim();
+            const volt = document.getElementById("batteryVolt").value.trim();
+            const buy = document.getElementById("buyPrice").value.trim();
+            const sell = document.getElementById("sellPrice").value.trim();
+            const quantity = document.getElementById("quantity").value.trim();
+            const warranty = document.getElementById("batteryWarranty").value.trim();
+
+
+            if (name && volt && buy && sell && quantity) {
+                db.ref("batteries").push({
+                name,
+                volt,
+                warranty,
+                buy: parseFloat(buy),
+                sell: parseFloat(sell),
+                quantity: parseInt(quantity)
+                }).then(() => {
+                    alert(" پاتری ب سەرکەفتیانە هاتە زێدەکرن!");
+                    clearInputs();
+                    loadBatteries();
+                }).catch(error => console.error("Error:", error));
+            } else {
+                alert("پێدفیە هەمی خانەیان تژی بکەی!");
+            }
+        }
+
+        function clearInputs() {
+            document.getElementById("batteryName").value = "";
+            document.getElementById("batteryVolt").value = "";
+            document.getElementById("buyPrice").value = "";
+            document.getElementById("sellPrice").value = "";
+            document.getElementById("quantity").value = "";
+            document.getElementById("batteryWarranty").value = "";
+        }
+
+        function loadBatteries() {
+    const batteryList = document.getElementById("batteryList");
+    if (!batteryList) return;
+
+    batteryList.innerHTML = "";
+    batteriesData = [];
+
+    let totalBuy = 0;
+    let totalSell = 0;
+
+    db.ref("batteries").on("value", snapshot => {
+        batteryList.innerHTML = "";
+        batteriesData = [];
+
+        let batteryArray = [];
+
+        snapshot.forEach(childSnapshot => {
+            const key = childSnapshot.key;
+            const data = childSnapshot.val();
+            batteryArray.push({ key, ...data });
+        });
+
+        // Sort by voltage (numeric)
+        batteryArray.sort((a, b) => (parseFloat(a.volt) || 0) - (parseFloat(b.volt) || 0));
+
+        batteryArray.forEach(battery => {
+            batteriesData.push(battery);
+            totalBuy += (parseFloat(battery.buy) || 0) * (parseInt(battery.quantity) || 0);
+            totalSell += (parseFloat(battery.sell) || 0) * (parseInt(battery.quantity) || 0);
+            createBatteryItem(battery.key, battery, batteryList);
+        });
+
+        // Totals
+        const totalsSection = document.getElementById("totalsSection");
+        if (totalsSection) {
+            if (batteriesData.length > 0) {
+                totalsSection.style.display = "flex";
+                document.getElementById("totalBuy").innerText = totalBuy.toLocaleString();
+                document.getElementById("totalSell").innerText = totalSell.toLocaleString();
+
+                db.ref("totals/batteries").set({ totalBuy, totalSell });
+            } else {
+                totalsSection.style.display = "none";
+                db.ref("totals/batteries").set({ totalBuy: 0, totalSell: 0 });
+            }
+        }
+    });
+}
+        function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function createBatteryItem(key, data, container) {
+    const row = document.createElement("tr");
+    row.id = `battery-${key}`;
+
+    row.innerHTML = `
+        <td id="name-${key}">${data.name}</td>
+        <td id="volt-${key}">${data.volt}</td>
+        <td id="warranty-${key}">${data.warranty || "-"}</td>
+        <td id="buy-${key}">${parseFloat(data.buy).toLocaleString()}</td>
+        <td id="sell-${key}">${parseFloat(data.sell).toLocaleString()}</td>
+        <td id="quantity-${key}">${parseInt(data.quantity)}</td>
+        <td>
+            <button class="edit-btn" id="editBatteryBtn-${key}"><i class="fas fa-edit"></i></button>
+            <button class="delete-btn" id="deleteBatteryBtn-${key}"><i class="fas fa-trash"></i></button>
+        </td>
+    `;
+    container.appendChild(row);
+
+    document.getElementById(`editBatteryBtn-${key}`).onclick = () => editBattery(key);
+    document.getElementById(`deleteBatteryBtn-${key}`).onclick = () => deleteBattery(key);
+}
+
+function editBattery(key) {
+    const battery = batteriesData.find(b => b.key === key);
+    if (!battery) return;
+
+    document.getElementById(`name-${key}`).innerHTML = `<input type="text" id="editName-${key}" value="${battery.name}" />`;
+    document.getElementById(`volt-${key}`).innerHTML = `<input type="text" id="editVolt-${key}" value="${battery.volt}" />`;
+    document.getElementById(`warranty-${key}`).innerHTML = `<input type="text" id="editWarranty-${key}" value="${battery.warranty || ''}" />`;
+    document.getElementById(`buy-${key}`).innerHTML = `<input type="number" id="editBuy-${key}" value="${battery.buy}" />`;
+    document.getElementById(`sell-${key}`).innerHTML = `<input type="number" id="editSell-${key}" value="${battery.sell}" />`;
+    document.getElementById(`quantity-${key}`).innerHTML = `<input type="number" id="editQuantity-${key}" value="${battery.quantity}" />`;
+
+    const container = document.getElementById(`battery-${key}`);
+    const editBtn = container.querySelector(".edit-btn");
+    const deleteBtn = container.querySelector(".delete-btn");
+
+    editBtn.innerHTML = `<i class="fas fa-save"></i>`;
+    editBtn.onclick = () => saveEditBattery(key);
+
+    deleteBtn.innerHTML = `<i class="fas fa-times"></i>`;
+    deleteBtn.onclick = () => loadBatteries(); // cancel
+}
+
+
+function saveEditBattery(key) {
+    const name = document.getElementById(`editName-${key}`).value.trim();
+    const volt = document.getElementById(`editVolt-${key}`).value.trim();
+    const warranty = document.getElementById(`editWarranty-${key}`).value.trim();
+    const buy = document.getElementById(`editBuy-${key}`).value.trim();
+    const sell = document.getElementById(`editSell-${key}`).value.trim();
+    const quantity = document.getElementById(`editQuantity-${key}`).value.trim();
+
+    if (name && volt && buy && sell && quantity) {
+        db.ref("batteries/" + key).update({
+            name,
+            volt,
+            warranty,
+            buy: parseFloat(buy),
+            sell: parseFloat(sell),
+            quantity: parseInt(quantity)
+        }).then(() => {
+            alert("پاتەری ب سەرکەفتیانە هاتە نیکرن!");
+            loadBatteries();
+        }).catch(error => console.error("Error:", error));
+    } else {
+        alert("پێدفیە هەمی خانەیان تژی بکەی!");
+    }
+    }
+
+        function deleteBattery(key) {
+            if (confirm(" تە دفێت پاتری بهێتە ژێبرن ؟")) {
+                db.ref("batteries/" + key).remove().then(() => {
+                    alert("پاتری ب سەرکەفتیانە هاتە ژێبرن");
+                    loadBatteries();
+                });
+            }
+        }
+
+        function searchBatteries() {
+        const query = document.getElementById("searchInput").value.trim().toLowerCase();
+        if (!query) {
+            renderBatteryList(batteriesData);
+            updateTotals();
+            return;
+        }
+        // Filter by name or volt
+        const filtered = batteriesData.filter(item =>
+            item.name.toLowerCase().includes(query) || item.volt.toLowerCase().includes(query)
+        );
+        renderBatteryList(filtered);
+        updateTotals(filtered);
+    }
+
+    function updateTotals(data = batteriesData) {
+        let totalBuy = 0;
+        let totalSell = 0;
+
+        data.forEach(item => {
+            totalBuy += item.buy * item.quantity;
+            totalSell += item.sell * item.quantity;
+        });
+
+        document.getElementById("totalBuy").textContent = formatNumber(totalBuy);
+        document.getElementById("totalSell").textContent = formatNumber(totalSell);
+    }
+
+        function goBack() {
+            window.location.href = "dashboard.html";  // Change this to your actual home/list page if needed
+        }
+
+        // Load batteries on page load
+        window.onload = loadBatteries;
+    </script>
+</body>
+</html>

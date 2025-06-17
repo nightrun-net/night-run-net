@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>لیستا فروتنا ویل و تایران</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js" crossorigin="anonymous"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      direction: rtl;
+      text-align: right;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      font-size: 25px;
+      
+    }
+    .container h3
+    {
+      text-align: center;
+      font-size: 25px;
+    }
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+      font-size: 20px;
+    }
+    select, input[type="number"], input[readonly], input[type="text"] {
+      width: 99%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 20px;
+    }
+    .section {
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+    .grid-container {
+      margin-top: 20px;
+      background: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      max-height: 800px;
+      overflow-y: auto;
+      font-size: 20px;
+    }
+    .grid-item {
+      background: #2c3e50;
+      color: white;
+      padding: 10px;
+      font-size: 17px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .btn {
+      background: #2c3e50;
+      color: white;
+      padding: 10px;
+      font-size: 20px;
+      border: none;
+      border-radius: 5px;
+      width: 100%;
+      margin-top: 10px;
+      cursor: pointer;
+
+    }
+    h2{
+      text-align: center;
+    }
+    .checkbox{
+      cursor: pointer;
+    }
+    .btn-modern {
+  padding: 10px 18px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 6px 5px;
+  cursor: pointer;
+  color: #fff;
+  background-color: #444;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: all 0.3s ease-in-out;
+}
+
+.btn-edit {
+  background-color: #007BFF;
+}
+
+.btn-edit:hover {
+  background-color: #0056b3;
+  box-shadow: 0 0 10px rgba(0,123,255,0.5);
+}
+
+.btn-delete {
+  background-color: #DC3545;
+}
+
+.btn-delete:hover {
+  background-color: #a71d2a;
+  box-shadow: 0 0 10px rgba(220,53,69,0.5);
+}
+
+.btn-print {
+  background-color: #28A745;
+}
+
+.btn-print:hover {
+  background-color: #1e7e34;
+  box-shadow: 0 0 10px rgba(40,167,69,0.5);
+}
+.styled-month-input {
+  padding: 10px 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  height: 42px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.3s;
+  direction: ltr; /* month input usually looks better LTR */
+}
+
+.styled-month-input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 5px #3498db;
+}
+.btn-deletee
+{
+    background-color:#2c3e50 ;
+    color: white;
+    padding: 10px;
+    transition: .3s;
+    border-radius: 10px;
+}
+.btn-deletee:hover
+{
+    background-color: #c0392b;
+    transition: .3s;
+    cursor: pointer;
+    border: none;
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3 id="salesTotalLabel">💵   بهایێ گشتی یێ ڤروتنێ: 0 $</h3>
+    
+    <button class="btn" onclick="window.location.href='soldlist.html'">لیستا ڤروتیان</button>
+    <br>
+    <h2> لیستا فروتنا ویل و تایران</h2>
+
+
+    <label> نافێ کریاری:</label>
+    <input type="text" id="customerName" />
+
+    <label> ژمارا موبایلێ:</label>
+    <input type="text" id="customerMobile" />
+
+    <label><input type="checkbox" class="checkbox" id="wheelCheck" onchange="toggleSection('wheelSection')"/>  فروتنا ویلان</label>
+    <div id="wheelSection" class="section" style="display:none;">
+      <label> نافێ ویلی:</label>
+      <select id="wheelItem" onchange="autoFillPrice('wheel')"></select>
+
+      <label> بهایێ فروتنێ:</label>
+      <input type="number" id="wheelPrice"  />
+
+      <label>ژمارە:</label>
+      <input type="number" id="wheelQty" oninput="updateItemTotal('wheel')" />
+
+      <label> بهایێ گشتیێ ویلان:</label>
+      <input type="number" id="wheelTotal" readonly />
+    </div>
+
+    <label><input type="checkbox" class="checkbox" id="tierCheck" onchange="toggleSection('tierSection')"/>  فروتنا تایران</label>
+    <div id="tierSection" class="section" style="display:none;">
+      <label> نافێ تایرێ:</label>
+      <select id="tierItem" onchange="autoFillPrice('tier')"></select>
+
+      <label> بهایێ فروتنێ:</label>
+      <input type="number" id="tierPrice"  />
+
+      <label>ژمارە:</label>
+      <input type="number" id="tierQty" oninput="updateItemTotal('tier')" />
+
+      <label> بهایێ گشتیێ تایران:</label>
+      <input type="number" id="tierTotal" readonly />
+    </div>
+
+    <label><input type="checkbox" class="checkbox" id="tier2Check" onchange="toggleSection('tier2Section')"/>فروتنا تایران 2</label>
+<div id="tier2Section" class="section" style="display:none;">
+  <label>ناڤێ تایرێ:</label>
+  <select id="tier2Item" onchange="autoFillPrice('tier2')"></select>
+
+  <label> بهای فروتن:</label>
+  <input type="number" id="tier2Price" />
+
+  <label> ژمارە:</label>
+  <input type="number" id="tier2Qty" oninput="updateItemTotal('tier2')" />
+
+  <label> بهای گشتی:</label>
+  <input type="number" id="tier2Total" readonly />
+</div>
+
+<br>
+<br>
+
+    <label> بهایێ گشتی:</label>
+    <input type="number" id="finalTotal" readonly />
+
+    <button id="saveBtn" class="btn" onclick="saveSale()">
+      <i class="fas fa-save"></i> ڤروتن
+    </button>
+    <button class="btn" onclick="goBack()">
+      <i class="fas fa-arrow-right"></i> زفرین بو لیستا زانیاریا
+  </button>
+    </div>    
+  
+    <div class="grid-container">
+      <h2>لیستا ویل و تایرێت فروتی</h2>
+
+      <label>لێگەریان لدیڤ ناڤی یان ژمارا موبایلێ:</label>
+<input type="text" id="searchInput"  />
+        <br>
+        <input type="month" class="styled-month-input" id="deleteMonthInput" />
+<button class="btn-deletee" onclick="deleteSalesByMonth()">ژێبرن لدیف هەیڤێ</button>
+<br>
+<br>
+      <div id="salesList"></div>
+
+    </div>
+  </div>
+  <script>
+    let currentEditKey = null;
+let originalSaleData = null;
+
+  // ✅ Your Firebase Configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
+    authDomain: "edirsbarwari-7723e.firebaseapp.com",
+    databaseURL: "https://edirsbarwari-7723e-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "edirsbarwari-7723e",
+    storageBucket: "edirsbarwari-7723e.firebasestorage.app",
+    messagingSenderId: "1098821018295",
+    appId: "1:1098821018295:web:06b1d698b6d0b43b226332",
+    measurementId: "G-818MFB3X5H"
+  };
+
+  // ✅ Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+
+
+  // ✅ Toggle Wheel/Tier Sections
+  function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    section.style.display = section.style.display === "none" ? "block" : "none";
+    updateFinalTotal();
+  }
+  function fetchItems(type) {
+  const select = document.getElementById(type + "Item");
+  select.innerHTML = `<option disabled selected>هەلبژێرە...</option>`;
+
+  const path = type === "wheel" ? "wheels" : "tiers";
+
+  db.ref(path).once("value", snapshot => {
+    const items = [];
+
+    snapshot.forEach(child => {
+      const data = child.val();
+      const getData = (key, fallback = '') => data[key] || fallback;
+
+      items.push({
+        key: child.key,
+        name: getData("name"),
+        price: getData("sell", 0),
+        quantity: parseInt(getData("quantity", 0)),
+        size: getData("size"),
+        code: getData("code"),
+        color: getData("color"),
+      });
+    });
+
+    // Sort items by size (assuming size is numerical or a comparable string)
+    items.sort((a, b) => {
+      // Convert sizes to numbers if possible
+      const sizeA = parseFloat(a.size) || 0;
+      const sizeB = parseFloat(b.size) || 0;
+      return sizeA - sizeB;
+    });
+
+    // Append sorted items
+    items.forEach(data => {
+      const option = document.createElement("option");
+      option.value = data.name;
+      option.setAttribute("data-price", data.price);
+      option.setAttribute("data-qty", data.quantity);
+      option.setAttribute("data-key", data.key);
+      option.setAttribute("data-size", data.size);
+
+      if (type === "wheel") {
+        option.setAttribute("data-code", data.code);
+        option.setAttribute("data-color", data.color);
+        option.text = ` کود ${data.code || 'کۆد نەدراو'} - رەنگ ${data.color || 'ڕەنگ نەدراو'}  - عدد ${data.quantity}  -  قەبارە ${data.size || 'قەبارە نەدراو'} `;
+      } else {
+        option.setAttribute("data-name", data.name);
+        option.text = `ناڤ ${data.name} -  عدد ${data.quantity} -  قەبارە ${data.size || 'قەبارە نەدراو'}`;
+      }
+
+      if (data.quantity <= 0) {
+        option.disabled = true;
+        option.text += " 🚫 (بەردەست نینە )";
+      }
+
+      select.appendChild(option);
+    });
+
+  }).catch(error => {
+    console.error("Error fetching items:", error);
+    alert("هەڵەیەک ڕویدا کە زانیاریەکان بارنەکراون.");
+  });
+}
+
+
+
+  // ✅ Auto Fill Price When Selecting Item
+  function autoFillPrice(type) {
+  const select = document.getElementById(type + "Item");
+  const selectedOption = select.options[select.selectedIndex];
+  const price = selectedOption.getAttribute("data-price");
+  const stockQty = parseInt(selectedOption.getAttribute("data-qty")) || 0;
+
+  if (stockQty <= 0) {
+    alert("🚫 ئەم کاڵاکە stock یەک 0ە و ناتوانرێت بفروشرێ.");
+    select.selectedIndex = 0;
+    document.getElementById(`${type}Price`).value = "";
+    document.getElementById(`${type}Qty`).value = "";
+    document.getElementById(`${type}Total`).value = "";
+    return;
+  }
+
+  document.getElementById(`${type}Price`).value = price;
+  updateItemTotal(type);
+}
+
+
+  // ✅ Update Total for Wheels or Tiers
+  function updateItemTotal(type) {
+  const price = parseFloat(document.getElementById(`${type}Price`).value) || 0;
+  const qty = parseInt(document.getElementById(`${type}Qty`).value) || 0;
+
+  const select = document.getElementById(`${type}Item`);
+  const selectedOption = select.options[select.selectedIndex];
+  const stockQty = parseInt(selectedOption.getAttribute("data-qty")) || 0;
+
+  if (qty > stockQty) {
+    alert(`🚫 بتنێ ${stockQty} عدد ژ فی جوری بەردەستن. نەشێی ${qty} عددا بفروشی.`);
+    document.getElementById(`${type}Qty`).value = "";
+    document.getElementById(`${type}Total`).value = "";
+    return;
+  }
+
+  const total = price * qty;
+  document.getElementById(`${type}Total`).value = total;
+  updateFinalTotal();
+}
+
+  // ✅ Update Final Total Price
+  function updateFinalTotal() {
+  const wheelTotal = parseFloat(document.getElementById("wheelTotal").value) || 0;
+  const tierTotal = parseFloat(document.getElementById("tierTotal").value) || 0;
+  const tier2Total = parseFloat(document.getElementById("tier2Total").value) || 0;
+  const total = wheelTotal + tierTotal + tier2Total;
+  document.getElementById("finalTotal").value = total;
+}
+
+
+  // ✅ Save Sale to Firebase
+  async function saveSale() {
+  try {
+    const isEdit = currentEditKey !== null;
+
+    const customerName = document.getElementById("customerName").value.trim();
+    const customerMobile = document.getElementById("customerMobile").value.trim();
+    const wheelChecked = document.getElementById("wheelCheck").checked;
+    const tierChecked = document.getElementById("tierCheck").checked;
+    const tier2Checked = document.getElementById("tier2Check").checked;
+
+    if (!customerName || !customerMobile || (!wheelChecked && !tierChecked && !tier2Checked)) {
+      alert("پێدڤیە هەمی خانە بهێنە تژی کرن");
+      return;
+    }
+
+    const wheelSelect = document.getElementById("wheelItem");
+    const tierSelect = document.getElementById("tierItem");
+    const tier2Select = document.getElementById("tier2Item");
+
+    // Save date as ISO string for easier month filtering
+    const nowISO = new Date().toISOString(); // e.g. 2025-05-28T08:15:30.123Z
+
+    const sale = {
+      customerName,
+      customerMobile,
+      date: nowISO,
+      wheels: wheelChecked
+        ? {
+            code: wheelSelect.options[wheelSelect.selectedIndex].dataset.code,
+            size: wheelSelect.options[wheelSelect.selectedIndex].dataset.size,
+            color: wheelSelect.options[wheelSelect.selectedIndex].dataset.color,
+            price: document.getElementById("wheelPrice").value,
+            qty: document.getElementById("wheelQty").value,
+            total: document.getElementById("wheelTotal").value,
+            key: wheelSelect.options[wheelSelect.selectedIndex].dataset.key,
+            currentQty: wheelSelect.options[wheelSelect.selectedIndex].dataset.qty,
+          }
+        : null,
+      tiers: tierChecked
+        ? {
+            name: tierSelect.options[tierSelect.selectedIndex].dataset.name,
+            size: tierSelect.options[tierSelect.selectedIndex].dataset.size,
+            price: document.getElementById("tierPrice").value,
+            qty: document.getElementById("tierQty").value,
+            total: document.getElementById("tierTotal").value,
+            key: tierSelect.options[tierSelect.selectedIndex].dataset.key,
+            currentQty: tierSelect.options[tierSelect.selectedIndex].dataset.qty,
+          }
+        : null,
+      tier2: tier2Checked
+        ? {
+            name: tier2Select.options[tier2Select.selectedIndex].dataset.name,
+            size: tier2Select.options[tier2Select.selectedIndex].dataset.size,
+            price: document.getElementById("tier2Price").value,
+            qty: document.getElementById("tier2Qty").value,
+            total: document.getElementById("tier2Total").value,
+            key: tier2Select.options[tier2Select.selectedIndex].dataset.key,
+            currentQty: tier2Select.options[tier2Select.selectedIndex].dataset.qty,
+          }
+        : null,
+      finalTotal: document.getElementById("finalTotal").value,
+    };
+
+    // Reference for new sale or existing
+    const ref = isEdit ? db.ref("sales/" + currentEditKey) : db.ref("sales").push();
+
+    // Restore quantities if editing
+    if (isEdit && originalSaleData) {
+      const restorePromises = [];
+
+      if (originalSaleData.wheels) {
+        const key = originalSaleData.wheels.key;
+        const qtyToRestore = parseInt(originalSaleData.wheels.qty, 10);
+        restorePromises.push(
+          db.ref("wheels/" + key + "/quantity")
+            .once("value")
+            .then(snap => {
+              const currentQty = snap.val() || 0;
+              return db.ref("wheels/" + key + "/quantity").set(currentQty + qtyToRestore);
+            })
+        );
+      }
+
+      if (originalSaleData.tiers) {
+        const key = originalSaleData.tiers.key;
+        const qtyToRestore = parseInt(originalSaleData.tiers.qty, 10);
+        restorePromises.push(
+          db.ref("tiers/" + key + "/quantity")
+            .once("value")
+            .then(snap => {
+              const currentQty = snap.val() || 0;
+              return db.ref("tiers/" + key + "/quantity").set(currentQty + qtyToRestore);
+            })
+        );
+      }
+
+      if (originalSaleData.tier2) {
+        const key = originalSaleData.tier2.key;
+        const qtyToRestore = parseInt(originalSaleData.tier2.qty, 10);
+        restorePromises.push(
+          db.ref("tiers/" + key + "/quantity")
+            .once("value")
+            .then(snap => {
+              const currentQty = snap.val() || 0;
+              return db.ref("tiers/" + key + "/quantity").set(currentQty + qtyToRestore);
+            })
+        );
+      }
+
+      await Promise.all(restorePromises);
+    }
+
+    // Save new sale
+    await ref.set(sale);
+
+    // Update inventory quantities
+    const updatePromises = [];
+
+    if (sale.wheels) {
+      const key = sale.wheels.key;
+      const currentQty = parseInt(sale.wheels.currentQty, 10);
+      const newQty = parseInt(sale.wheels.qty, 10);
+      let diff = newQty;
+
+      if (isEdit && originalSaleData?.wheels) {
+        const originalQty = parseInt(originalSaleData.wheels.qty, 10);
+        diff = newQty - originalQty;
+      }
+
+      const updatedQty = currentQty - diff;
+      updatePromises.push(db.ref(`wheels/${key}/quantity`).set(updatedQty));
+    }
+
+    if (sale.tiers) {
+      const key = sale.tiers.key;
+      const currentQty = parseInt(sale.tiers.currentQty, 10);
+      const newQty = parseInt(sale.tiers.qty, 10);
+      let diff = newQty;
+
+      if (isEdit && originalSaleData?.tiers) {
+        const originalQty = parseInt(originalSaleData.tiers.qty, 10);
+        diff = newQty - originalQty;
+      }
+
+      const updatedQty = currentQty - diff;
+      updatePromises.push(db.ref(`tiers/${key}/quantity`).set(updatedQty));
+    }
+
+    if (sale.tier2) {
+      const key = sale.tier2.key;
+      const currentQty = parseInt(sale.tier2.currentQty, 10);
+      const newQty = parseInt(sale.tier2.qty, 10);
+      let diff = newQty;
+
+      if (isEdit && originalSaleData?.tier2) {
+        const originalQty = parseInt(originalSaleData.tier2.qty, 10);
+        diff = newQty - originalQty;
+      }
+
+      const updatedQty = currentQty - diff;
+      updatePromises.push(db.ref(`tiers/${key}/quantity`).set(updatedQty));
+    }
+
+    await Promise.all(updatePromises);
+
+    // Print invoice before resetting currentEditKey
+    const saleKey = isEdit ? currentEditKey : ref.key;
+    printInvoice(saleKey);
+
+    // Reset form and states AFTER printing
+    currentEditKey = null;
+    originalSaleData = null;
+    document.getElementById("saveBtn").innerText = "خەزنکردن";
+
+    document.getElementById("customerName").value = "";
+    document.getElementById("customerMobile").value = "";
+    ["wheel", "tier", "tier2"].forEach(type => {
+      document.getElementById(`${type}Item`).selectedIndex = 0;
+      document.getElementById(`${type}Price`).value = "";
+      document.getElementById(`${type}Qty`).value = "";
+      document.getElementById(`${type}Total`).value = "";
+      document.getElementById(`${type}Check`).checked = false;
+      document.getElementById(`${type}Section`).style.display = "none";
+    });
+    document.getElementById("finalTotal").value = "";
+
+    await fetchItems("wheel");
+    await fetchItems("tier");
+    await fetchItems("tier2");
+    loadSales();
+
+    alert(isEdit ? " ڤروتن هاتە نیکرن ✅" : "فروتن هاتە تومارکرن!");
+
+  } catch (error) {
+    console.error("Error saving sale:", error);
+    alert("هەڵە ڕویدا لە کاتێکدا کەوتە ژێرخەزنکردن.");
+  }
+}
+
+
+document.getElementById("searchInput").addEventListener("input", loadSales);
+
+
+function loadSales() {
+  const filterText = document.getElementById("searchInput").value.toLowerCase().trim();
+
+  let totalSold = 0;
+
+  db.ref("sales").on("value", snapshot => {
+    const list = document.getElementById("salesList");
+    if (!list) return; // Safety check
+    list.innerHTML = "";  // Clear the list before populating
+
+    totalSold = 0; // Reset total on every data refresh
+
+    snapshot.forEach(child => {
+      const sale = child.val();
+      
+      const customerName = (sale.customerName || "").toLowerCase();
+      const customerMobile = (sale.customerMobile || "").toLowerCase();
+
+      // Filter if filterText is set
+      if (filterText && !customerName.includes(filterText) && !customerMobile.includes(filterText)) {
+        return;  // Skip if not matching filter
+      }
+
+      totalSold += parseFloat(sale.finalTotal) || 0;
+
+      const div = document.createElement("div");
+      div.className = "grid-item sale-box";
+
+      let html = `
+        👤 <strong>ناڤێ کریاری:</strong> ${sale.customerName || '-'}<br>
+        📞 <strong>ژمارا موبایلێ:</strong> ${sale.customerMobile || '-'}<br>
+        <hr>
+      `;
+
+      if (sale.wheels) {
+        html += `
+          <strong>🚗 ویل:</strong><br>
+          🔹 کۆد: ${sale.wheels.code || '-'}<br>
+          🔹 ڕەنگ: ${sale.wheels.color || '-'}<br>
+          🔹 قەبارە: ${sale.wheels.size || '-'}<br>
+          💲 ${parseFloat(sale.wheels.price || 0).toLocaleString()} × ${sale.wheels.qty || 0} = 
+          <strong>${parseFloat(sale.wheels.total || 0).toLocaleString()} $</strong><br>
+          <hr>
+        `;
+      }
+
+      if (sale.tiers) {
+        html += `
+          <strong>⭕ تایەر 1:</strong><br>
+          🔹 ناڤ: ${sale.tiers.name || '-'}<br>
+          🔹 قەبارە: ${sale.tiers.size || '-'}<br>
+          💲 ${parseFloat(sale.tiers.price || 0).toLocaleString()} × ${sale.tiers.qty || 0} = 
+          <strong>${parseFloat(sale.tiers.total || 0).toLocaleString()} $</strong><br>
+          <hr>
+        `;
+      }
+
+      if (sale.tier2 && Object.keys(sale.tier2).length > 0) {
+        html += `
+          <strong>⭕ تایەر 2:</strong><br>
+          🔹 ناڤ: ${sale.tier2.name || '-'}<br>
+          🔹 قەبارە: ${sale.tier2.size || '-'}<br>
+          💲 ${parseFloat(sale.tier2.price || 0).toLocaleString()} × ${sale.tier2.qty || 0} = 
+          <strong>${parseFloat(sale.tier2.total || 0).toLocaleString()} $</strong><br>
+          <hr>
+        `;
+      }
+
+      html += `
+        💵 <strong>بهایێ گشتی:</strong> ${parseFloat(sale.finalTotal || 0).toLocaleString()} $<br><br>
+        🕒 مێژویا فروتنێ: ${(sale.date || '-').substring(0, 10)}<br>
+        <button onclick="editSale('${child.key}')" class="btn-modern btn-edit">✏️ دەستکاری</button>
+        <button onclick="deleteSale('${child.key}')" class="btn-modern btn-delete">🗑 ژێبرن</button>
+        <button onclick="printInvoice('${child.key}')" class="btn-modern btn-print">🖨 چاپ کرن</button>
+      `;
+
+      div.innerHTML = html;
+      list.appendChild(div);
+    });
+
+    // Update total sales label
+    const salesTotalLabel = document.getElementById("salesTotalLabel");
+    if (salesTotalLabel) {
+      salesTotalLabel.innerText = `💵 بهایێ گشتی یێ ڤروتنێ: ${totalSold.toLocaleString()} $`;
+    }
+
+    // Update total in Firebase
+    db.ref("totals/sales").set({
+      totalSold: totalSold
+    });
+  });
+}
+
+function editSale(saleKey) {
+  db.ref("sales/" + saleKey).once("value", snap => {
+    const data = snap.val();
+    currentEditKey = saleKey;
+    originalSaleData = data;
+
+    // Set basic info
+    document.getElementById("customerName").value = data.customerName || "";
+    document.getElementById("customerMobile").value = data.customerMobile || "";
+
+    // Handle wheels section
+    if (data.wheels) {
+      document.getElementById("wheelCheck").checked = true;
+      document.getElementById("wheelSection").style.display = "block";
+
+      const wheelSelect = document.getElementById("wheelItem");
+      for (let i = 0; i < wheelSelect.options.length; i++) {
+        if (wheelSelect.options[i].getAttribute("data-key") === data.wheels.key) {
+          wheelSelect.selectedIndex = i;
+          break;
+        }
+      }
+
+      document.getElementById("wheelPrice").value = data.wheels.price || "";
+      document.getElementById("wheelQty").value = data.wheels.qty || "";
+      document.getElementById("wheelTotal").value = data.wheels.total || "";
+    } else {
+      document.getElementById("wheelCheck").checked = false;
+      document.getElementById("wheelSection").style.display = "none";
+      document.getElementById("wheelItem").selectedIndex = 0;
+      document.getElementById("wheelPrice").value = "";
+      document.getElementById("wheelQty").value = "";
+      document.getElementById("wheelTotal").value = "";
+    }
+
+    // Handle tiers section
+    if (data.tiers) {
+      document.getElementById("tierCheck").checked = true;
+      document.getElementById("tierSection").style.display = "block";
+
+      const tierSelect = document.getElementById("tierItem");
+      for (let i = 0; i < tierSelect.options.length; i++) {
+        if (tierSelect.options[i].getAttribute("data-key") === data.tiers.key) {
+          tierSelect.selectedIndex = i;
+          break;
+        }
+      }
+
+      document.getElementById("tierPrice").value = data.tiers.price || "";
+      document.getElementById("tierQty").value = data.tiers.qty || "";
+      document.getElementById("tierTotal").value = data.tiers.total || "";
+    } else {
+      document.getElementById("tierCheck").checked = false;
+      document.getElementById("tierSection").style.display = "none";
+      document.getElementById("tierItem").selectedIndex = 0;
+      document.getElementById("tierPrice").value = "";
+      document.getElementById("tierQty").value = "";
+      document.getElementById("tierTotal").value = "";
+    }
+
+    // Handle tier2 section (added)
+    if (data.tier2) {
+      document.getElementById("tier2Check").checked = true;
+      document.getElementById("tier2Section").style.display = "block";
+
+      const tier2Select = document.getElementById("tier2Item");
+      for (let i = 0; i < tier2Select.options.length; i++) {
+        if (tier2Select.options[i].getAttribute("data-key") === data.tier2.key) {
+          tier2Select.selectedIndex = i;
+          break;
+        }
+      }
+
+      document.getElementById("tier2Price").value = data.tier2.price || "";
+      document.getElementById("tier2Qty").value = data.tier2.qty || "";
+      document.getElementById("tier2Total").value = data.tier2.total || "";
+    } else {
+      document.getElementById("tier2Check").checked = false;
+      document.getElementById("tier2Section").style.display = "none";
+      document.getElementById("tier2Item").selectedIndex = 0;
+      document.getElementById("tier2Price").value = "";
+      document.getElementById("tier2Qty").value = "";
+      document.getElementById("tier2Total").value = "";
+    }
+
+    // Update final total
+    document.getElementById("finalTotal").value = data.finalTotal || "";
+
+    // Update save button text
+    document.getElementById("saveBtn").innerText = "نیکرن";
+
+    // Optional: call updateFinalTotal() if you have this function for recalculating totals on UI
+    if (typeof updateFinalTotal === "function") {
+      updateFinalTotal();
+    }
+  });
+}
+
+
+function deleteSale(saleKey) {
+  if (confirm(" تە دڤێت فروتن بهێتە زڤراندن؟")) {
+    db.ref("sales/" + saleKey).once("value", snap => {
+      const sale = snap.val();
+
+      // ✅ Restore wheel quantity by key
+      if (sale.wheels && sale.wheels.key) {
+        const qtyToRestore = parseInt(sale.wheels.qty);
+        const wheelKey = sale.wheels.key;
+
+        db.ref("wheels/" + wheelKey + "/quantity").once("value", snap => {
+          const currentQty = snap.val() || 0;
+          db.ref("wheels/" + wheelKey + "/quantity").set(currentQty + qtyToRestore);
+        });
+      }
+
+      // ✅ Restore tier1 quantity by key
+      if (sale.tiers && sale.tiers.key) {
+        const qtyToRestore = parseInt(sale.tiers.qty);
+        const tierKey = sale.tiers.key;
+
+        db.ref("tiers/" + tierKey + "/quantity").once("value", snap => {
+          const currentQty = snap.val() || 0;
+          db.ref("tiers/" + tierKey + "/quantity").set(currentQty + qtyToRestore);
+        });
+      }
+
+      // ✅ Restore tier2 quantity by key (NEW)
+      if (sale.tier2 && sale.tier2.key) {
+        const qtyToRestore = parseInt(sale.tier2.qty);
+        const tier2Key = sale.tier2.key;
+
+        db.ref("tiers/" + tier2Key + "/quantity").once("value", snap => {
+          const currentQty = snap.val() || 0;
+          db.ref("tiers/" + tier2Key + "/quantity").set(currentQty + qtyToRestore);
+        });
+      }
+
+      // ✅ Delete the sale record
+      db.ref("sales/" + saleKey).remove().then(() => {
+        alert("✅ ڤروتن هاتە زڤراندن ، کەلوپەل زڤرینە فە کوگەهێ");
+        loadSales();
+        fetchItems("wheel");
+        fetchItems("tier");
+        fetchItems("tier2"); // refresh tier2 list if used
+
+        location.reload();
+      });
+    });
+  }
+}
+
+function deleteSalesByMonth() {
+  const monthInput = document.getElementById("deleteMonthInput").value; // expect YYYY-MM
+  if (!monthInput) {
+    alert("❗پێدفیە هەیڤ بهێتە دەست نیشانکرن بو ژێبرنا داتایێن هەیڤا نیشانکری.");
+    return;
+  }
+
+  db.ref("sales").once("value").then(snapshot => {
+    let count = 0;
+
+    snapshot.forEach(child => {
+      const sale = child.val();
+      const key = child.key;
+
+      if (sale.date && sale.date.startsWith(monthInput)) {
+        count++;
+      }
+    });
+
+    if (count === 0) {
+      alert(`⚠️ ڤروتن بو هەیڤا ${monthInput} نەهاتە دیتن.`);
+      return;
+    }
+
+    // Delete matching sales
+    snapshot.forEach(child => {
+      const sale = child.val();
+      const key = child.key;
+
+      if (sale.date && sale.date.startsWith(monthInput)) {
+        db.ref("sales/" + key).remove();
+      }
+    });
+
+    alert(`✅ هەمی ${count}  ڤروتنێن هەیڤا ${monthInput} هاتنە ژێبرن.`);
+  });
+}
+
+
+
+
+function printInvoice(saleKey) {
+  db.ref("sales/" + saleKey).once("value", snap => {
+    const sale = snap.val();
+    if (!sale) return alert("فرۆشتنەکە نەدۆزرایەوە.");
+
+    const styles = `
+      <style>
+        @page { size: A4; margin: 25mm; }
+        body {
+          font-family: 'Segoe UI', 'Noto Sans Arabic', sans-serif;
+          color: #222;
+          font-size: 16px;
+          line-height: 1.6;
+          margin: 0;
+          padding: 0;
+          direction: rtl;
+          text-align: right;
+        }
+        .invoice {
+          max-width: 800px;
+          margin: auto;
+          padding: 20px;
+          border: 2px solid #444;
+          border-radius: 8px;
+          background-color: #fff;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 20px;
+          font-size: 22px;
+          font-weight: bold;
+          color: #2c3e50;
+        }
+        .contact {
+          font-size: 15px;
+          color: #555;
+          margin-top: 5px;
+          line-height: 1.6;
+        }
+        .ltr {
+          direction: ltr;
+          unicode-bidi: embed;
+          font-family: monospace, Arial;
+          margin-left: 5px;
+        }
+        .details {
+          margin-bottom: 20px;
+          padding: 10px;
+          background-color: #f9f9f9;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+        }
+        .details strong {
+          display: inline-block;
+          width: 150px;
+          color: #333;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+          font-weight: bold;
+          font-size: 16px;
+        }
+        th, td {
+          border: 1px solid #bbb;
+          padding: 10px;
+          text-align: center;
+        }
+        th {
+          background-color: #f0f0f0;
+          color: #333;
+        }
+        .footer {
+          text-align: center;
+          margin-top: 30px;
+          font-weight: bold;
+          font-size: 18px;
+        }
+        .signatures {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 40px;
+          font-size: 15px;
+          font-weight: bold;
+          color: #2c3e50;
+        }
+      </style>
+    `;
+
+    // Helper functions
+    const safeNum = (n) => parseFloat(n) || 0;
+    const formatNum = (n) => n.toLocaleString();
+
+    // Create rows for tiers (can be array or single object)
+    const makeTierRows = (tiers, label) => {
+      if (!tiers) return '';
+      let arr = Array.isArray(tiers) ? tiers : [tiers];
+      return arr.map((tier, idx) => {
+        const price = safeNum(tier.price);
+        const qty = parseInt(tier.qty) || 0;
+        const total = price * qty;
+        return `
+          <tr>
+            <td>${label} ${idx + 1}</td>
+            <td>${tier.name || '-'}</td>
+            <td>${tier.size || '-'}</td>
+            <td>${formatNum(price)} $</td>
+            <td>${qty}</td>
+            <td>${formatNum(total)} $</td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    // Wheel info
+    const hasWheel = sale.wheels && sale.wheels.qty && parseInt(sale.wheels.qty) > 0;
+    const hasTier = sale.tiers && sale.tiers.qty && parseInt(sale.tiers.qty) > 0;
+    const hasTier2 = sale.tier2 && sale.tier2.qty && parseInt(sale.tier2.qty) > 0;
+
+    // Wheel price and totals
+    const wheelPrice = safeNum(sale.wheels?.price);
+    const wheelQty = parseInt(sale.wheels?.qty) || 0;
+    const wheelTotal = wheelPrice * wheelQty;
+
+    // Prepare tables conditionally
+    const wheelTable = hasWheel ? `
+      <table>
+        <thead>
+          <tr>
+            <th>روونکرن</th>
+            <th>کۆد</th>
+            <th>رەنگ</th>
+            <th>بها</th>
+            <th>ژمارە</th>
+            <th>بهایێ گشتی</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ویل</td>
+            <td>${sale.wheels?.code || '-'}</td>
+            <td>${sale.wheels?.color || '-'}</td>
+            <td>${formatNum(wheelPrice)} $</td>
+            <td>${wheelQty}</td>
+            <td>${formatNum(wheelTotal)} $</td>
+          </tr>
+        </tbody>
+      </table>
+    ` : '';
+
+    const tierTables = (hasTier || hasTier2) ? `
+      <table>
+        <thead>
+          <tr>
+            <th>روونکرن</th>
+            <th>ناڤ</th>
+            <th>قەبارە</th>
+            <th>بها</th>
+            <th>ژمارە</th>
+            <th>بهایێ گشتی</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${hasTier ? makeTierRows(sale.tiers, "تایرە") : ''}
+          ${hasTier2 ? makeTierRows(sale.tier2, "تایرە") : ''}
+        </tbody>
+      </table>
+    ` : '';
+
+    const content = `
+      ${styles}
+      <div class="invoice">
+        <div class="header">پێشانگەها ادریس بەرواری</div>
+        <div class="contact">
+          📞 <span class="ltr">٠٧٥٠٤٥٠٤٤٤٤</span><br>
+          📞 <span class="ltr">٠٧٥٠٤٥٧١٥١٥</span>
+        </div>
+
+        <div class="details">
+          <div><strong>نافێ کریـــاری:</strong> ${sale.customerName || '-'}</div>
+          <div><strong>ژمارەی تەلەفۆن:</strong> <span class="ltr">${sale.customerMobile || '-'}</span></div>
+          <div><strong>مێژویا ڤروتنێ:</strong> ${(sale.date || '-').substring(0, 10)}</div>
+        </div>
+
+        ${wheelTable}
+        ${tierTables}
+
+        <div class="footer">
+          💵 بهای گشتی: ${formatNum(safeNum(sale.finalTotal))} $<br>
+          📆 دەمێ چاپکرنێ : ${new Date().toLocaleString()}
+        </div>
+
+        <div class="signatures">
+          <div>ئیمزایا بەرێز : ${sale.customerName || '-'}</div>
+          <div>مورا پێشانگەهێ</div>
+        </div>
+      </div>
+    `;
+
+    const win = window.open('', '', 'width=900,height=1100');
+    win.document.write(`<html><head><title>Invoice</title></head><body>${content}</body></html>`);
+    win.document.close();
+    win.focus();
+    win.print();
+    win.close();
+  });
+}
+
+  // Back to Dashboard
+  function goBack() {
+    window.location.href = "dashboard.html";
+  }
+
+  // ✅ Load Everything on Page Load
+  window.onload = () => {
+    fetchItems("wheel");
+    fetchItems("tier");
+    fetchItems("tier2");  // ✅ Call added here
+    loadSales();
+  };
+</script>

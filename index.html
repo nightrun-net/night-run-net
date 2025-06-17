@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ku">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>چوونەژوورەوە</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+        font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #eef2f3, #8e9eab);
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      direction: rtl;
+    }
+    .login-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: right;
+    }
+    h2 {
+      margin-bottom: 1.5rem;
+      color: #2c3e50;
+      text-align: center;
+    }
+    label {
+      font-weight: bold;
+      margin-top: 1rem;
+      display: block;
+    }
+    input {
+      width: 100%;
+      padding: 0.7rem;
+      margin-top: 0.4rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: 0.8rem;
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #357abd;
+    }
+    .error {
+      color: red;
+      margin-top: 0.7rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <h2>چونا ژور</h2>
+    <form id="loginForm">
+      <label for="email">ئیمەیڵ</label>
+      <input type="email" id="email" required>
+
+      <label for="password">ژمارا نهێنی</label>
+      <input type="password" id="password" required>
+
+      <button type="submit">چونا ژور</button>
+      <div class="error" id="errorMsg"></div>
+    </form>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
+      authDomain: "edirsbarwari-7723e.firebaseapp.com",
+      databaseURL: "https://edirsbarwari-7723e-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "edirsbarwari-7723e",
+      storageBucket: "edirsbarwari-7723e.firebasestorage.app",
+      messagingSenderId: "1098821018295",
+      appId: "1:1098821018295:web:06b1d698b6d0b43b226332",
+      measurementId: "G-818MFB3X5H"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    const loginForm = document.getElementById('loginForm');
+    const errorMsg = document.getElementById('errorMsg');
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      errorMsg.textContent = '';
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          window.location.href = 'dashboard.html';
+        })
+        .catch(error => {
+          errorMsg.textContent = 'هەڵە: ' + error.message;
+        });
+    });
+  </script>
+
+</body>
+</html>
