@@ -199,5 +199,42 @@
     // Initial load
     window.onload = loadSales;
   </script>
+  <script>
+  function showNetworkWarning(isOffline) {
+      const warningId = "network-warning";
+  
+      if (isOffline) {
+          // Show warning message if not already shown
+          if (!document.getElementById(warningId)) {
+              const warning = document.createElement("div");
+              warning.id = warningId;
+              warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
+              warning.style.position = "fixed";
+              warning.style.top = "0";
+              warning.style.left = "0";
+              warning.style.width = "100%";
+              warning.style.backgroundColor = "#e74c3c";
+              warning.style.color = "white";
+              warning.style.textAlign = "center";
+              warning.style.padding = "12px";
+              warning.style.zIndex = "9999";
+              warning.style.fontSize = "18px";
+              warning.style.fontWeight = "bold";
+              document.body.appendChild(warning);
+          }
+      } else {
+          // Remove the warning if it exists
+          const existing = document.getElementById(warningId);
+          if (existing) existing.remove();
+      }
+  }
+  
+  // Initial check on load
+  showNetworkWarning(!navigator.onLine);
+  
+  // Listen for connection status changes
+  window.addEventListener('online', () => showNetworkWarning(false));
+  window.addEventListener('offline', () => showNetworkWarning(true));
+  </script>
 </body>
 </html>
