@@ -100,6 +100,20 @@
     .section {
       margin-bottom: 2rem;
     }
+
+    .btn-modern {
+  padding: 5px 10px;
+  border: none;
+  background-color: #f44336;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-modern:hover {
+  background-color: #d32f2f;
+}
+
   </style>
 </head>
 <body>
@@ -200,14 +214,14 @@
       passMsgDiv.className = '';
 
       if (newPass.length < 6) {
-        passMsgDiv.textContent = 'وشەی نهێنی دەبێت بەلایەنی کەم 6 پیت بێت.';
+        passMsgDiv.textContent = 'ژمارا نهێنی پێدڤیە ٦ ژمارە بن یان زێدەتر .';
         passMsgDiv.className = 'error';
         return;
       }
 
       auth.currentUser.updatePassword(newPass)
         .then(() => {
-          alert('وشەی نهێنی بە سەرکەوتووی گۆڕدرا!');
+          alert('ژمارا نهێنی ب سەرکەفتیانە هاتە نویکرن!');
           newPasswordInput.value = '';
         })
         .catch(error => {
@@ -224,13 +238,13 @@
       addUserMsgDiv.className = '';
 
       if (!email || !password) {
-        addUserMsgDiv.textContent = 'تکایە هەردوو خانە پڕبکەرەوە.';
+        addUserMsgDiv.textContent = 'پێدڤیە هەردوو خانە بهێنە تژی کرن.';
         addUserMsgDiv.className = 'error';
         return;
       }
 
       if (password.length < 6) {
-        addUserMsgDiv.textContent = 'وشەی نهێنی دەبێت لە 6 پیت زۆرتر بێت.';
+        addUserMsgDiv.textContent = 'ژمارا نهێنی پێدڤیە ٦ ژمارە بن یان زێدەتر.';
         addUserMsgDiv.className = 'error';
         return;
       }
@@ -244,7 +258,7 @@
           });
         })
         .then(() => {
-          alert('بەکارهێنەری نوێ زیادکرا. تکایە دووبارە بچۆ ژوورەوە.');
+          alert('بکارهێنەر هاتە زێدەکرن ، هیفی دکەین دووبارە بو چونا ژور');
           window.location.href = 'index.html';
         })
         .catch(error => {
@@ -255,61 +269,94 @@
 
     // بارکردنی لیستی بەکارهێنەران
     function loadUsers() {
-      usersListUl.innerHTML = '';
-      db.ref('users').once('value')
-        .then(snapshot => {
-          const users = snapshot.val();
-          if (!users) {
-            usersListUl.innerHTML = '<li>هیچ بەکارهێنەرێک نەدۆزرایەوە.</li>';
-            return;
-          }
-          Object.values(users).forEach(user => {
-            const li = document.createElement('li');
-            li.textContent = user.email;
-            usersListUl.appendChild(li);
-          });
-        })
-        .catch(() => {
-          usersListUl.innerHTML = '<li>هەڵە لە کاتێکدا لیست دابەزێتەوە.</li>';
-        });
-    }
+  usersListUl.innerHTML = '';
+
+  db.ref('users').once('value')
+    .then(snapshot => {
+      const users = snapshot.val();
+
+      if (!users) {
+        usersListUl.innerHTML = '<li>هیچ بکارهێنەر نە هاتە دیتن.</li>';
+        return;
+      }
+
+      Object.entries(users).forEach(([key, user]) => {
+        const li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.justifyContent = 'space-between';
+        li.style.alignItems = 'center';
+        li.style.padding = '6px 0';
+
+        const emailSpan = document.createElement('span');
+        emailSpan.textContent = user.email;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '🗑 ژێبرن';
+        deleteBtn.className = 'btn-modern btn-delete';
+        deleteBtn.onclick = () => deleteUser(key, user.email);
+
+        li.appendChild(emailSpan);
+        li.appendChild(deleteBtn);
+        usersListUl.appendChild(li);
+      });
+    })
+    .catch(() => {
+      usersListUl.innerHTML = '<li>هەڵە لە کاتێکدا لیست دابەزێتەوە.</li>';
+    });
+}
+
+function deleteUser(userKey, userEmail) {
+  const confirmMsg = `  ئەرێ تە دفێت بکارهێنەر:\n\n${userEmail}\n\بهێتە ژێبرن`;
+  if (confirm(confirmMsg)) {
+    db.ref('users/' + userKey).remove()
+      .then(() => {
+        alert("🗑 بکارهێنەر ب سەرکەڤتیانە هاتە ژێبرن.");
+        loadUsers(); // refresh list
+      })
+      .catch(err => {
+        console.error("User delete failed:", err);
+        alert("❌ ژێبرن سەرکەڤتی نەبوو.");
+      });
+  }
+}
+
   </script>
   <script>
-  function showNetworkWarning(isOffline) {
-      const warningId = "network-warning";
-  
-      if (isOffline) {
-          // Show warning message if not already shown
-          if (!document.getElementById(warningId)) {
-              const warning = document.createElement("div");
-              warning.id = warningId;
-              warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
-              warning.style.position = "fixed";
-              warning.style.top = "0";
-              warning.style.left = "0";
-              warning.style.width = "100%";
-              warning.style.backgroundColor = "#e74c3c";
-              warning.style.color = "white";
-              warning.style.textAlign = "center";
-              warning.style.padding = "12px";
-              warning.style.zIndex = "9999";
-              warning.style.fontSize = "18px";
-              warning.style.fontWeight = "bold";
-              document.body.appendChild(warning);
-          }
-      } else {
-          // Remove the warning if it exists
-          const existing = document.getElementById(warningId);
-          if (existing) existing.remove();
-      }
-  }
-  
-  // Initial check on load
-  showNetworkWarning(!navigator.onLine);
-  
-  // Listen for connection status changes
-  window.addEventListener('online', () => showNetworkWarning(false));
-  window.addEventListener('offline', () => showNetworkWarning(true));
-  </script>
+    function showNetworkWarning(isOffline) {
+        const warningId = "network-warning";
+    
+        if (isOffline) {
+            // Show warning message if not already shown
+            if (!document.getElementById(warningId)) {
+                const warning = document.createElement("div");
+                warning.id = warningId;
+                warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
+                warning.style.position = "fixed";
+                warning.style.top = "0";
+                warning.style.left = "0";
+                warning.style.width = "100%";
+                warning.style.backgroundColor = "#e74c3c";
+                warning.style.color = "white";
+                warning.style.textAlign = "center";
+                warning.style.padding = "12px";
+                warning.style.zIndex = "9999";
+                warning.style.fontSize = "18px";
+                warning.style.fontWeight = "bold";
+                document.body.appendChild(warning);
+            }
+        } else {
+            // Remove the warning if it exists
+            const existing = document.getElementById(warningId);
+            if (existing) existing.remove();
+        }
+    }
+    
+    // Initial check on load
+    showNetworkWarning(!navigator.onLine);
+    
+    // Listen for connection status changes
+    window.addEventListener('online', () => showNetworkWarning(false));
+    window.addEventListener('offline', () => showNetworkWarning(true));
+    </script>
 </body>
 </html>
