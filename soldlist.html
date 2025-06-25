@@ -107,134 +107,138 @@
     }
 
     function loadSales() {
-      const filterText = document.getElementById("searchInput").value.toLowerCase().trim();
+  const filterText = document.getElementById("searchInput").value.toLowerCase().trim();
 
-      let totalSold = 0;
+  let totalSold = 0;
 
-      db.ref("sales").once("value").then(snapshot => {
-        const list = document.getElementById("salesList");
-        list.innerHTML = "";  // Clear list
+  db.ref("sales").once("value").then(snapshot => {
+    const list = document.getElementById("salesList");
+    list.innerHTML = "";  // Clear list
 
-        totalSold = 0;
+    totalSold = 0;
 
-        snapshot.forEach(child => {
-          const sale = child.val();
+    snapshot.forEach(child => {
+      const sale = child.val();
 
-          const customerName = (sale.customerName || "").toLowerCase();
-          const customerMobile = (sale.customerMobile || "").toLowerCase();
+      const customerName = (sale.customerName || "").toLowerCase();
+      const customerMobile = (sale.customerMobile || "").toLowerCase();
 
-          if (
-            filterText &&
-            !customerName.includes(filterText) &&
-            !customerMobile.includes(filterText)
-          ) {
-            return; // Skip non-matching
-          }
+      if (
+        filterText &&
+        !customerName.includes(filterText) &&
+        !customerMobile.includes(filterText)
+      ) {
+        return; // Skip non-matching
+      }
 
-          totalSold += parseFloat(sale.finalTotal) || 0;
+      totalSold += parseFloat(sale.finalTotal) || 0;
 
-          const div = document.createElement("div");
-          div.className = "sale-box";
+      const div = document.createElement("div");
+      div.className = "sale-box";
 
-          let html = `
-            👤 <strong>نافێ کریاری:</strong> ${sale.customerName || '-'}<br>
-            📞 <strong>ژمارا موبایلێ:</strong> ${sale.customerMobile || '-'}<br>
-            <hr>
-          `;
+      let html = `
+        👤 <strong>نافێ کریاری:</strong> ${sale.customerName || '-'}<br>
+        📞 <strong>ژمارا موبایلێ:</strong> ${sale.customerMobile || '-'}<br>
+        <hr>
+      `;
 
-          if (sale.wheels) {
-            html += `
-              <strong>🚗 ویل:</strong><br>
-              🔹 کۆد: ${sale.wheels.code || '-'}<br>
-              🔹 ڕەنگ: ${sale.wheels.color || '-'}<br>
-              🔹 قەبارە: ${sale.wheels.size || '-'}<br>
-              💲 ${parseFloat(sale.wheels.price || 0).toLocaleString()} × ${sale.wheels.qty || 0} = 
-              <strong>${parseFloat(sale.wheels.total || 0).toLocaleString()} $</strong><br>
-              <hr>
-            `;
-          }
+      if (sale.wheels) {
+        html += `
+          <strong>🚗 ویل:</strong><br>
+          🔹 کۆد: ${sale.wheels.code || '-'}<br>
+          🔹 ڕەنگ: ${sale.wheels.color || '-'}<br>
+          🔹 قەبارە: ${sale.wheels.size || '-'}<br>
+          💲 ${parseFloat(sale.wheels.price || 0).toLocaleString()} × ${sale.wheels.qty || 0} = 
+          <strong>${parseFloat(sale.wheels.total || 0).toLocaleString()} $</strong><br>
+          <hr>
+        `;
+      }
 
-          if (sale.tiers) {
-            html += `
-              <strong>⭕ تایەر 1:</strong><br>
-              🔹 ناڤ: ${sale.tiers.name || '-'}<br>
-              🔹 قەبارە: ${sale.tiers.size || '-'}<br>
-              💲 ${parseFloat(sale.tiers.price || 0).toLocaleString()} × ${sale.tiers.qty || 0} = 
-              <strong>${parseFloat(sale.tiers.total || 0).toLocaleString()} $</strong><br>
-              <hr>
-            `;
-          }
+      if (sale.tiers) {
+        html += `
+          <strong>⭕ تایەر 1:</strong><br>
+          🔹 ناڤ: ${sale.tiers.name || '-'}<br>
+          🔹 قەبارە: ${sale.tiers.size || '-'}<br>
+          💲 ${parseFloat(sale.tiers.price || 0).toLocaleString()} × ${sale.tiers.qty || 0} = 
+          <strong>${parseFloat(sale.tiers.total || 0).toLocaleString()} $</strong><br>
+          <hr>
+        `;
+      }
 
-          if (sale.tier2 && Object.keys(sale.tier2).length > 0) {
-            html += `
-              <strong>⭕ تایەر 2:</strong><br>
-              🔹 ناڤ: ${sale.tier2.name || '-'}<br>
-              🔹 قەبارە: ${sale.tier2.size || '-'}<br>
-              💲 ${parseFloat(sale.tier2.price || 0).toLocaleString()} × ${sale.tier2.qty || 0} = 
-              <strong>${parseFloat(sale.tier2.total || 0).toLocaleString()} $</strong><br>
-              <hr>
-            `;
-          }
+      if (sale.tier2 && Object.keys(sale.tier2).length > 0) {
+        html += `
+          <strong>⭕ تایەر 2:</strong><br>
+          🔹 ناڤ: ${sale.tier2.name || '-'}<br>
+          🔹 قەبارە: ${sale.tier2.size || '-'}<br>
+          💲 ${parseFloat(sale.tier2.price || 0).toLocaleString()} × ${sale.tier2.qty || 0} = 
+          <strong>${parseFloat(sale.tier2.total || 0).toLocaleString()} $</strong><br>
+          <hr>
+        `;
+      }
 
-          html += `
-          💵 <strong>بهایێ گشتی:</strong> ${parseFloat(sale.finalTotal || 0).toLocaleString()} $<br>
-          🕒 مێژویا ڤروتنێ: ${(sale.date || '-').substring(0, 10)}<br><br>
+      const discount = parseFloat(sale.discount || 0);
+      const finalTotal = parseFloat(sale.finalTotal || 0);
+      const subTotal = finalTotal + discount;
 
-          `;
+      html += `
+        🧮 <strong>بهایێ گشتی:</strong> ${subTotal.toLocaleString()} $<br>
+        🎁 <strong>بهایێ ویل و تایرێت کەفن:</strong> ${discount.toLocaleString()} $<br>
+        💰 <strong>بهایێ دوماهیکێ:</strong> ${finalTotal.toLocaleString()} $<br>
+        <br>
+        🕒 <strong>مێژویا ڤروتنێ:</strong> ${(sale.date || '-').substring(0, 10)}<br><br>
+      `;
 
-          div.innerHTML = html;
-          list.appendChild(div);
-        });
+      div.innerHTML = html;
+      list.appendChild(div);
+    });
 
-        const salesTotalLabel = document.getElementById("salesTotalLabel");
-        salesTotalLabel.innerText = `💵 بهایێ گشتی یێ ڤروتنێ: ${totalSold.toLocaleString()} $`;
+    const salesTotalLabel = document.getElementById("salesTotalLabel");
+    salesTotalLabel.innerText = `💵 بهایێ گشتی یێ ڤروتنێ: ${totalSold.toLocaleString()} $`;
 
-        // Optional: update total in Firebase (if needed)
-        // db.ref("totals/sales").set({ totalSold: totalSold });
-      }).catch(err => {
-        console.error("Failed to load sales:", err);
-      });
-    }
+  }).catch(err => {
+    console.error("Failed to load sales:", err);
+  });
+}
 
     // Initial load
     window.onload = loadSales;
   </script>
   <script>
-  function showNetworkWarning(isOffline) {
-      const warningId = "network-warning";
-  
-      if (isOffline) {
-          // Show warning message if not already shown
-          if (!document.getElementById(warningId)) {
-              const warning = document.createElement("div");
-              warning.id = warningId;
-              warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
-              warning.style.position = "fixed";
-              warning.style.top = "0";
-              warning.style.left = "0";
-              warning.style.width = "100%";
-              warning.style.backgroundColor = "#e74c3c";
-              warning.style.color = "white";
-              warning.style.textAlign = "center";
-              warning.style.padding = "12px";
-              warning.style.zIndex = "9999";
-              warning.style.fontSize = "18px";
-              warning.style.fontWeight = "bold";
-              document.body.appendChild(warning);
-          }
-      } else {
-          // Remove the warning if it exists
-          const existing = document.getElementById(warningId);
-          if (existing) existing.remove();
-      }
-  }
-  
-  // Initial check on load
-  showNetworkWarning(!navigator.onLine);
-  
-  // Listen for connection status changes
-  window.addEventListener('online', () => showNetworkWarning(false));
-  window.addEventListener('offline', () => showNetworkWarning(true));
-  </script>
+    function showNetworkWarning(isOffline) {
+        const warningId = "network-warning";
+    
+        if (isOffline) {
+            // Show warning message if not already shown
+            if (!document.getElementById(warningId)) {
+                const warning = document.createElement("div");
+                warning.id = warningId;
+                warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
+                warning.style.position = "fixed";
+                warning.style.top = "0";
+                warning.style.left = "0";
+                warning.style.width = "100%";
+                warning.style.backgroundColor = "#e74c3c";
+                warning.style.color = "white";
+                warning.style.textAlign = "center";
+                warning.style.padding = "12px";
+                warning.style.zIndex = "9999";
+                warning.style.fontSize = "18px";
+                warning.style.fontWeight = "bold";
+                document.body.appendChild(warning);
+            }
+        } else {
+            // Remove the warning if it exists
+            const existing = document.getElementById(warningId);
+            if (existing) existing.remove();
+        }
+    }
+    
+    // Initial check on load
+    showNetworkWarning(!navigator.onLine);
+    
+    // Listen for connection status changes
+    window.addEventListener('online', () => showNetworkWarning(false));
+    window.addEventListener('offline', () => showNetworkWarning(true));
+    </script>
 </body>
 </html>
