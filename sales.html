@@ -222,8 +222,16 @@
 <br>
 <br>
 
-    <label> بهایێ گشتی:</label>
-    <input type="number" id="finalTotal" readonly />
+
+<label> بهایێ گشتی:</label>
+<input type="number" id="totalPrice" readonly />
+
+<label>بهایێ ویل و تایرێت کەفن:</label>
+<input type="number" id="discount" oninput="applyDiscount()" />
+
+<label>بهایێ دوماهیکێ:</label>
+<input type="number" id="finalTotal" readonly />
+
 
     <button id="saveBtn" class="btn" onclick="saveSale()">
       <i class="fas fa-save"></i> ڤروتن
@@ -388,9 +396,24 @@ let originalSaleData = null;
   const wheelTotal = parseFloat(document.getElementById("wheelTotal").value) || 0;
   const tierTotal = parseFloat(document.getElementById("tierTotal").value) || 0;
   const tier2Total = parseFloat(document.getElementById("tier2Total").value) || 0;
+
   const total = wheelTotal + tierTotal + tier2Total;
-  document.getElementById("finalTotal").value = total;
+
+  document.getElementById("totalPrice").value = total.toFixed();
+
+  applyDiscount(); // recalculate finalTotal after discount
 }
+
+
+function applyDiscount() {
+  const total = parseFloat(document.getElementById('totalPrice').value) || 0;
+  const discount = parseFloat(document.getElementById('discount').value) || 0;
+
+  const final = Math.max(total - discount, 0); // Ensure it doesn't go negative
+
+  document.getElementById('finalTotal').value = final.toFixed();
+}
+
 
 
   // ✅ Save Sale to Firebase
@@ -404,6 +427,10 @@ let originalSaleData = null;
     const tierChecked = document.getElementById("tierCheck").checked;
     const tier2Checked = document.getElementById("tier2Check").checked;
 
+    const totalPrice = parseFloat(document.getElementById("totalPrice").value) || 0;
+    const discount = parseFloat(document.getElementById("discount").value) || 0;
+    const finalTotal = parseFloat(document.getElementById("finalTotal").value) || 0;
+
     if (!customerName || !customerMobile || (!wheelChecked && !tierChecked && !tier2Checked)) {
       alert("پێدڤیە هەمی خانە بهێنە تژی کرن");
       return;
@@ -413,8 +440,7 @@ let originalSaleData = null;
     const tierSelect = document.getElementById("tierItem");
     const tier2Select = document.getElementById("tier2Item");
 
-    // Save date as ISO string for easier month filtering
-    const nowISO = new Date().toISOString(); // e.g. 2025-05-28T08:15:30.123Z
+    const nowISO = new Date().toISOString();
 
     const sale = {
       customerName,
@@ -454,13 +480,14 @@ let originalSaleData = null;
             currentQty: tier2Select.options[tier2Select.selectedIndex].dataset.qty,
           }
         : null,
-      finalTotal: document.getElementById("finalTotal").value,
+      totalPrice,
+      discount,
+      finalTotal,
     };
 
-    // Reference for new sale or existing
     const ref = isEdit ? db.ref("sales/" + currentEditKey) : db.ref("sales").push();
 
-    // Restore quantities if editing
+    // Restore stock if editing
     if (isEdit && originalSaleData) {
       const restorePromises = [];
 
@@ -506,10 +533,10 @@ let originalSaleData = null;
       await Promise.all(restorePromises);
     }
 
-    // Save new sale
+    // Save to Firebase
     await ref.set(sale);
 
-    // Update inventory quantities
+    // Update inventory
     const updatePromises = [];
 
     if (sale.wheels) {
@@ -517,12 +544,10 @@ let originalSaleData = null;
       const currentQty = parseInt(sale.wheels.currentQty, 10);
       const newQty = parseInt(sale.wheels.qty, 10);
       let diff = newQty;
-
       if (isEdit && originalSaleData?.wheels) {
         const originalQty = parseInt(originalSaleData.wheels.qty, 10);
         diff = newQty - originalQty;
       }
-
       const updatedQty = currentQty - diff;
       updatePromises.push(db.ref(`wheels/${key}/quantity`).set(updatedQty));
     }
@@ -532,12 +557,10 @@ let originalSaleData = null;
       const currentQty = parseInt(sale.tiers.currentQty, 10);
       const newQty = parseInt(sale.tiers.qty, 10);
       let diff = newQty;
-
       if (isEdit && originalSaleData?.tiers) {
         const originalQty = parseInt(originalSaleData.tiers.qty, 10);
         diff = newQty - originalQty;
       }
-
       const updatedQty = currentQty - diff;
       updatePromises.push(db.ref(`tiers/${key}/quantity`).set(updatedQty));
     }
@@ -547,29 +570,29 @@ let originalSaleData = null;
       const currentQty = parseInt(sale.tier2.currentQty, 10);
       const newQty = parseInt(sale.tier2.qty, 10);
       let diff = newQty;
-
       if (isEdit && originalSaleData?.tier2) {
         const originalQty = parseInt(originalSaleData.tier2.qty, 10);
         diff = newQty - originalQty;
       }
-
       const updatedQty = currentQty - diff;
       updatePromises.push(db.ref(`tiers/${key}/quantity`).set(updatedQty));
     }
 
     await Promise.all(updatePromises);
 
-    // Print invoice before resetting currentEditKey
     const saleKey = isEdit ? currentEditKey : ref.key;
     printInvoice(saleKey);
 
-    // Reset form and states AFTER printing
+    // Reset form
     currentEditKey = null;
     originalSaleData = null;
     document.getElementById("saveBtn").innerText = "خەزنکردن";
-
     document.getElementById("customerName").value = "";
     document.getElementById("customerMobile").value = "";
+    document.getElementById("totalPrice").value = "";
+    document.getElementById("discount").value = "";
+    document.getElementById("finalTotal").value = "";
+
     ["wheel", "tier", "tier2"].forEach(type => {
       document.getElementById(`${type}Item`).selectedIndex = 0;
       document.getElementById(`${type}Price`).value = "";
@@ -578,46 +601,40 @@ let originalSaleData = null;
       document.getElementById(`${type}Check`).checked = false;
       document.getElementById(`${type}Section`).style.display = "none";
     });
-    document.getElementById("finalTotal").value = "";
 
     await fetchItems("wheel");
     await fetchItems("tier");
     await fetchItems("tier2");
     loadSales();
 
-    alert(isEdit ? " ڤروتن هاتە نیکرن ✅" : "فروتن هاتە تومارکرن!");
-
+    alert(isEdit ? "ڤروتن هاتە نیکرن ✅" : "فروتن هاتە تومارکرن!");
   } catch (error) {
     console.error("Error saving sale:", error);
     alert("هەڵە ڕویدا لە کاتێکدا کەوتە ژێرخەزنکردن.");
   }
 }
 
-
 document.getElementById("searchInput").addEventListener("input", loadSales);
 
 
 function loadSales() {
   const filterText = document.getElementById("searchInput").value.toLowerCase().trim();
-
   let totalSold = 0;
 
   db.ref("sales").on("value", snapshot => {
     const list = document.getElementById("salesList");
-    if (!list) return; // Safety check
-    list.innerHTML = "";  // Clear the list before populating
+    if (!list) return;
 
-    totalSold = 0; // Reset total on every data refresh
+    list.innerHTML = "";
+    totalSold = 0;
 
     snapshot.forEach(child => {
       const sale = child.val();
-      
       const customerName = (sale.customerName || "").toLowerCase();
       const customerMobile = (sale.customerMobile || "").toLowerCase();
 
-      // Filter if filterText is set
       if (filterText && !customerName.includes(filterText) && !customerMobile.includes(filterText)) {
-        return;  // Skip if not matching filter
+        return;
       }
 
       totalSold += parseFloat(sale.finalTotal) || 0;
@@ -665,9 +682,13 @@ function loadSales() {
         `;
       }
 
+      // Show total, discount, and final price
       html += `
-        💵 <strong>بهایێ گشتی:</strong> ${parseFloat(sale.finalTotal || 0).toLocaleString()} $<br><br>
+        🧾 <strong>بهایێ گشتی:</strong> ${parseFloat(sale.totalPrice || 0).toLocaleString()} $<br>
+        💸 <strong>بهایێ ویل و تایرێت کەفن:</strong> ${parseFloat(sale.discount || 0).toLocaleString()} $<br>
+        💵 <strong>بهایێ دوماهیکێ:</strong> <span style="color: green;">${parseFloat(sale.finalTotal || 0).toLocaleString()} $</span><br><br>
         🕒 مێژویا فروتنێ: ${(sale.date || '-').substring(0, 10)}<br>
+
         <button onclick="editSale('${child.key}')" class="btn-modern btn-edit">✏️ دەستکاری</button>
         <button onclick="deleteSale('${child.key}')" class="btn-modern btn-delete">🗑 ژێبرن</button>
         <button onclick="printInvoice('${child.key}')" class="btn-modern btn-print">🖨 چاپ کرن</button>
@@ -677,13 +698,11 @@ function loadSales() {
       list.appendChild(div);
     });
 
-    // Update total sales label
     const salesTotalLabel = document.getElementById("salesTotalLabel");
     if (salesTotalLabel) {
       salesTotalLabel.innerText = `💵 بهایێ گشتی یێ ڤروتنێ: ${totalSold.toLocaleString()} $`;
     }
 
-    // Update total in Firebase
     db.ref("totals/sales").set({
       totalSold: totalSold
     });
@@ -750,7 +769,7 @@ function editSale(saleKey) {
       document.getElementById("tierTotal").value = "";
     }
 
-    // Handle tier2 section (added)
+    // Handle tier2 section
     if (data.tier2) {
       document.getElementById("tier2Check").checked = true;
       document.getElementById("tier2Section").style.display = "block";
@@ -775,13 +794,16 @@ function editSale(saleKey) {
       document.getElementById("tier2Total").value = "";
     }
 
-    // Update final total
+    // Set discount value if exists, otherwise zero
+    document.getElementById("discount").value = data.discount || 0;
+
+    // Set final total value
     document.getElementById("finalTotal").value = data.finalTotal || "";
 
-    // Update save button text
+    // Update save button text to indicate editing
     document.getElementById("saveBtn").innerText = "نیکرن";
 
-    // Optional: call updateFinalTotal() if you have this function for recalculating totals on UI
+    // Optionally trigger recalculation to reflect changes on UI
     if (typeof updateFinalTotal === "function") {
       updateFinalTotal();
     }
@@ -789,57 +811,88 @@ function editSale(saleKey) {
 }
 
 
-function deleteSale(saleKey) {
-  if (confirm(" تە دڤێت فروتن بهێتە زڤراندن؟")) {
-    db.ref("sales/" + saleKey).once("value", snap => {
-      const sale = snap.val();
 
-      // ✅ Restore wheel quantity by key
-      if (sale.wheels && sale.wheels.key) {
-        const qtyToRestore = parseInt(sale.wheels.qty);
-        const wheelKey = sale.wheels.key;
+async function deleteSale(saleKey) {
+  if (!confirm("تە دڤێت فروتن بهێتە زڤراندن؟")) return;
 
-        db.ref("wheels/" + wheelKey + "/quantity").once("value", snap => {
-          const currentQty = snap.val() || 0;
-          db.ref("wheels/" + wheelKey + "/quantity").set(currentQty + qtyToRestore);
-        });
-      }
+  try {
+    const snap = await db.ref("sales/" + saleKey).once("value");
+    const sale = snap.val();
+    if (!sale) {
+      alert("فروتن دەرنەدرا");
+      return;
+    }
 
-      // ✅ Restore tier1 quantity by key
-      if (sale.tiers && sale.tiers.key) {
-        const qtyToRestore = parseInt(sale.tiers.qty);
-        const tierKey = sale.tiers.key;
+    const restorePromises = [];
 
-        db.ref("tiers/" + tierKey + "/quantity").once("value", snap => {
-          const currentQty = snap.val() || 0;
-          db.ref("tiers/" + tierKey + "/quantity").set(currentQty + qtyToRestore);
-        });
-      }
+    // Restore wheel quantity
+    if (sale.wheels && sale.wheels.key) {
+      const qtyToRestore = parseInt(sale.wheels.qty, 10) || 0;
+      const wheelKey = sale.wheels.key;
 
-      // ✅ Restore tier2 quantity by key (NEW)
-      if (sale.tier2 && sale.tier2.key) {
-        const qtyToRestore = parseInt(sale.tier2.qty);
-        const tier2Key = sale.tier2.key;
+      restorePromises.push(
+        db.ref("wheels/" + wheelKey + "/quantity")
+          .once("value")
+          .then(snap => {
+            const currentQty = snap.val() || 0;
+            return db.ref("wheels/" + wheelKey + "/quantity").set(currentQty + qtyToRestore);
+          })
+      );
+    }
 
-        db.ref("tiers/" + tier2Key + "/quantity").once("value", snap => {
-          const currentQty = snap.val() || 0;
-          db.ref("tiers/" + tier2Key + "/quantity").set(currentQty + qtyToRestore);
-        });
-      }
+    // Restore tier1 quantity
+    if (sale.tiers && sale.tiers.key) {
+      const qtyToRestore = parseInt(sale.tiers.qty, 10) || 0;
+      const tierKey = sale.tiers.key;
 
-      // ✅ Delete the sale record
-      db.ref("sales/" + saleKey).remove().then(() => {
-        alert("✅ ڤروتن هاتە زڤراندن ، کەلوپەل زڤرینە فە کوگەهێ");
-        loadSales();
-        fetchItems("wheel");
-        fetchItems("tier");
-        fetchItems("tier2"); // refresh tier2 list if used
+      restorePromises.push(
+        db.ref("tiers/" + tierKey + "/quantity")
+          .once("value")
+          .then(snap => {
+            const currentQty = snap.val() || 0;
+            return db.ref("tiers/" + tierKey + "/quantity").set(currentQty + qtyToRestore);
+          })
+      );
+    }
 
-        location.reload();
-      });
-    });
+    // Restore tier2 quantity
+    if (sale.tier2 && sale.tier2.key) {
+      const qtyToRestore = parseInt(sale.tier2.qty, 10) || 0;
+      const tier2Key = sale.tier2.key;
+
+      restorePromises.push(
+        db.ref("tiers/" + tier2Key + "/quantity")
+          .once("value")
+          .then(snap => {
+            const currentQty = snap.val() || 0;
+            return db.ref("tiers/" + tier2Key + "/quantity").set(currentQty + qtyToRestore);
+          })
+      );
+    }
+
+    // Wait for all restore operations to complete
+    await Promise.all(restorePromises);
+
+    // Delete the sale
+    await db.ref("sales/" + saleKey).remove();
+
+    alert("✅ ڤروتن هاتە زڤراندن ، کەلوپەل زڤرینە فە کوگەهێ");
+
+    // Refresh UI & data
+    loadSales();
+    await fetchItems("wheel");
+    await fetchItems("tier");
+    await fetchItems("tier2");
+
+    // Optionally reload page (only if necessary)
+    // location.reload();
+
+  } catch (error) {
+    console.error("Error deleting sale:", error);
+    alert("هەڵەیەک ڕویدا لە کاتێکدا کەوتە ژێر زڤراندن");
   }
 }
+
 
 function deleteSalesByMonth() {
   const monthInput = document.getElementById("deleteMonthInput").value; // expect YYYY-MM
@@ -883,9 +936,12 @@ function deleteSalesByMonth() {
 
 
 function printInvoice(saleKey) {
-  db.ref("sales/" + saleKey).once("value", snap => {
+  db.ref("sales/" + saleKey).once("value").then(snap => {
     const sale = snap.val();
-    if (!sale) return alert("فرۆشتنەکە نەدۆزرایەوە.");
+    if (!sale) {
+      alert("فرۆشتنەکە نەدۆزرایەوە.");
+      return;
+    }
 
     const styles = `
       <style>
@@ -972,21 +1028,21 @@ function printInvoice(saleKey) {
       </style>
     `;
 
-    // Helper functions
-    const safeNum = (n) => parseFloat(n) || 0;
-    const formatNum = (n) => n.toLocaleString();
+    // Helpers
+    const safeNum = n => parseFloat(n) || 0;
+    const formatNum = n => n.toLocaleString();
 
-    // Create rows for tiers (can be array or single object)
+    // Create rows for tiers (support single object or array)
     const makeTierRows = (tiers, label) => {
       if (!tiers) return '';
-      let arr = Array.isArray(tiers) ? tiers : [tiers];
-      return arr.map((tier, idx) => {
+      const arr = Array.isArray(tiers) ? tiers : [tiers];
+      return arr.map((tier, i) => {
         const price = safeNum(tier.price);
         const qty = parseInt(tier.qty) || 0;
         const total = price * qty;
         return `
           <tr>
-            <td>${label} ${idx + 1}</td>
+            <td>${label} ${i + 1}</td>
             <td>${tier.name || '-'}</td>
             <td>${tier.size || '-'}</td>
             <td>${formatNum(price)} $</td>
@@ -997,17 +1053,10 @@ function printInvoice(saleKey) {
       }).join('');
     };
 
-    // Wheel info
-    const hasWheel = sale.wheels && sale.wheels.qty && parseInt(sale.wheels.qty) > 0;
-    const hasTier = sale.tiers && sale.tiers.qty && parseInt(sale.tiers.qty) > 0;
-    const hasTier2 = sale.tier2 && sale.tier2.qty && parseInt(sale.tier2.qty) > 0;
+    const hasWheel = sale.wheels && parseInt(sale.wheels.qty) > 0;
+    const hasTier = sale.tiers && parseInt(sale.tiers.qty) > 0;
+    const hasTier2 = sale.tier2 && parseInt(sale.tier2.qty) > 0;
 
-    // Wheel price and totals
-    const wheelPrice = safeNum(sale.wheels?.price);
-    const wheelQty = parseInt(sale.wheels?.qty) || 0;
-    const wheelTotal = wheelPrice * wheelQty;
-
-    // Prepare tables conditionally
     const wheelTable = hasWheel ? `
       <table>
         <thead>
@@ -1025,9 +1074,9 @@ function printInvoice(saleKey) {
             <td>ویل</td>
             <td>${sale.wheels?.code || '-'}</td>
             <td>${sale.wheels?.color || '-'}</td>
-            <td>${formatNum(wheelPrice)} $</td>
-            <td>${wheelQty}</td>
-            <td>${formatNum(wheelTotal)} $</td>
+            <td>${formatNum(safeNum(sale.wheels?.price))} $</td>
+            <td>${parseInt(sale.wheels?.qty) || 0}</td>
+            <td>${formatNum(safeNum(sale.wheels?.price) * (parseInt(sale.wheels?.qty) || 0))} $</td>
           </tr>
         </tbody>
       </table>
@@ -1070,10 +1119,13 @@ function printInvoice(saleKey) {
         ${wheelTable}
         ${tierTables}
 
-        <div class="footer">
-          💵 بهای گشتی: ${formatNum(safeNum(sale.finalTotal))} $<br>
-          📆 دەمێ چاپکرنێ : ${new Date().toLocaleString()}
-        </div>
+<div class="footer">
+  💵  بهایێ گشتی: ${formatNum(safeNum(sale.total || sale.totalPrice))} $<br>
+  🎁 بهایێ ویل و تایرێت کەفن: ${formatNum(safeNum(sale.discount || 0))} $<br>
+  💰  بهایێ دوماهیکێ: ${formatNum(safeNum(sale.finalTotal))} $<br>
+  📆 دەمێ چاپکرنێ : ${new Date().toLocaleString()}
+</div>
+
 
         <div class="signatures">
           <div>ئیمزایا بەرێز : ${sale.customerName || '-'}</div>
@@ -1088,8 +1140,11 @@ function printInvoice(saleKey) {
     win.focus();
     win.print();
     win.close();
+  }).catch(err => {
+    alert("Error fetching sale data: " + err.message);
   });
 }
+
 
   // Back to Dashboard
   function goBack() {
