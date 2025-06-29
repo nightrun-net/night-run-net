@@ -261,7 +261,7 @@
         <input
           type="text"
           id="searchInput"
-          placeholder="نافێ تایرێ"
+          placeholder="قەبارێ تایرێ"
           onkeyup="searchTiers()"
         />
     </div>
@@ -501,30 +501,34 @@ function saveEditTier(key) {
         }
 
         function searchTiers() {
-            const query = document.getElementById("searchInput").value.trim().toLowerCase();
-            const tierList = document.getElementById("tierList");
-            tierList.innerHTML = "";
+    const query = document.getElementById("searchInput").value.trim().toLowerCase();
+    const tierList = document.getElementById("tierList");
+    tierList.innerHTML = "";
 
-            let filteredTiers = tiersData.filter(tier => tier.name.toLowerCase().includes(query));
-            if(filteredTiers.length === 0){
-                tierList.innerHTML = "<p>ئەف جورێ تایرێ نە هاتە دیتن.</p>";
-                document.getElementById("totalsSection").style.display = "none";
-                return;
-            }
+    let filteredTiers = tiersData.filter(tier => 
+        tier.size && tier.size.toString().toLowerCase().includes(query)
+    );
 
-            let totalBuy = 0;
-            let totalSell = 0;
+    if(filteredTiers.length === 0){
+        tierList.innerHTML = "<p>ئەف جورێ تایرێ نە هاتە دیتن.</p>";
+        document.getElementById("totalsSection").style.display = "none";
+        return;
+    }
 
-            filteredTiers.forEach(({key, ...data}) => {
-                createTierItem(key, data, tierList);
-                totalBuy += (parseFloat(data.buy) || 0) * (parseInt(data.quantity) || 0);
-                totalSell += (parseFloat(data.sell) || 0) * (parseInt(data.quantity) || 0);
-            });
+    let totalBuy = 0;
+    let totalSell = 0;
 
-            document.getElementById("totalsSection").style.display = "flex";
-            document.getElementById("totalBuy").innerText = totalBuy.toLocaleString();
-            document.getElementById("totalSell").innerText = totalSell.toLocaleString();
-        }
+    filteredTiers.forEach(({key, ...data}) => {
+        createTierItem(key, data, tierList);
+        totalBuy += (parseFloat(data.buy) || 0) * (parseInt(data.quantity) || 0);
+        totalSell += (parseFloat(data.sell) || 0) * (parseInt(data.quantity) || 0);
+    });
+
+    document.getElementById("totalsSection").style.display = "flex";
+    document.getElementById("totalBuy").innerText = totalBuy.toLocaleString();
+    document.getElementById("totalSell").innerText = totalSell.toLocaleString();
+}
+
 
         function goBack() {
             window.location.href = "dashboard.html";
