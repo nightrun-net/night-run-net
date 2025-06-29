@@ -362,7 +362,7 @@
 
     snapshot.forEach(childSnap => {
       const data = childSnap.val();
-      if ((parseInt(data.quantity) || 0) <= 3) {
+      if ((parseInt(data.quantity) || 0) <= 4) {
         tiers.push({ key: childSnap.key, ...data });
       }
     });
