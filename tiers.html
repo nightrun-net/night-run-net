@@ -345,11 +345,16 @@
 
 
 
-        function parseTireSize(sizeStr) {
+function parseTireSize(sizeStr) {
   if (!sizeStr) return [0, 0, 0];
-  const parts = sizeStr.split("/").map(Number);
-  return parts.length === 3 ? parts : [0, 0, 0];
+  // Handle cases where the last part may contain letters, e.g., "20LT"
+  const parts = sizeStr.split("/");
+  const lastPart = parts[2] || "0";
+  // Extract number only from last part (e.g. "20LT" -> 20)
+  const rim = parseInt(lastPart.match(/\d+/)[0], 10);
+  return [Number(parts[0]), Number(parts[1]), rim];
 }
+
 
 function loadTiers() {
   const tierList = document.getElementById("tierList");
@@ -379,12 +384,9 @@ function loadTiers() {
 
     // Sort by size
     tiersData.sort((a, b) => {
-      const sizeA = parseTireSize(a.size);
-      const sizeB = parseTireSize(b.size);
-
-      if (sizeA[0] !== sizeB[0]) return sizeA[0] - sizeB[0];
-      if (sizeA[1] !== sizeB[1]) return sizeA[1] - sizeB[1];
-      return sizeA[2] - sizeB[2];
+  const rimA = parseTireSize(a.size)[2];
+  const rimB = parseTireSize(b.size)[2];
+  return rimA - rimB; // ascending order by rim size
     });
 
     tierList.innerHTML = ""; // clear again
