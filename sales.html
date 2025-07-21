@@ -289,6 +289,20 @@ let originalSaleData = null;
 
   const path = type === "wheel" ? "wheels" : "tiers";
 
+  // Helper function to parse tire size and get rim size (last number)
+  function parseTireSize(sizeStr) {
+    if (!sizeStr) return [0, 0, 0];
+    const parts = sizeStr.split("/");
+    if (parts.length < 3) return [0, 0, 0];
+
+    // Extract rim size from last part, handling possible letters like '20LT'
+    const rimPart = parts[2];
+    const rimNumberMatch = rimPart.match(/\d+/);
+    const rim = rimNumberMatch ? parseInt(rimNumberMatch[0], 10) : 0;
+
+    return [Number(parts[0]), Number(parts[1]), rim];
+  }
+
   db.ref(path).once("value", snapshot => {
     const items = [];
 
@@ -307,15 +321,14 @@ let originalSaleData = null;
       });
     });
 
-    // Sort items by size (assuming size is numerical or a comparable string)
+    // Sort items by rim size (last number in size)
     items.sort((a, b) => {
-      // Convert sizes to numbers if possible
-      const sizeA = parseFloat(a.size) || 0;
-      const sizeB = parseFloat(b.size) || 0;
-      return sizeA - sizeB;
+      const rimA = parseTireSize(a.size)[2];
+      const rimB = parseTireSize(b.size)[2];
+      return rimA - rimB;
     });
 
-    // Append sorted items
+    // Append sorted items to select
     items.forEach(data => {
       const option = document.createElement("option");
       option.value = data.name;
@@ -327,10 +340,10 @@ let originalSaleData = null;
       if (type === "wheel") {
         option.setAttribute("data-code", data.code);
         option.setAttribute("data-color", data.color);
-        option.text = ` کود ${data.code || 'کۆد نەدراو'} - رەنگ ${data.color || 'ڕەنگ نەدراو'}  - عدد ${data.quantity}  -  قەبارە ${data.size || 'قەبارە نەدراو'} `;
+        option.text = ` کۆد ${data.code || 'کۆد نەدراو'} - رەنگ ${data.color || 'رەنگ نەدراو'}  - عدد ${data.quantity}  -  قەبارە ${data.size || 'قەبارە نەدراو'} `;
       } else {
         option.setAttribute("data-name", data.name);
-        option.text = `ناڤ ${data.name} -  عدد ${data.quantity} -  قەبارە ${data.size || 'قەبارە نەدراو'}`;
+        option.text = ` ناڤ ${data.name} - عدد ${data.quantity} - قەبارە ${data.size || 'قەبارە نەدراو'}`;
       }
 
       if (data.quantity <= 0) {
@@ -346,6 +359,7 @@ let originalSaleData = null;
     alert("هەڵەیەک ڕویدا کە زانیاریەکان بارنەکراون.");
   });
 }
+
 
 
 
