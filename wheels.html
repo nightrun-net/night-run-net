@@ -277,6 +277,8 @@
             <th>💰 بهایە کرینێ</th>
             <th>💵 بهایە فروتنێ</th>
             <th>📦 ژمارە</th>
+            <th>🕘 دەمێ زێدەکرنێ</th>
+            <th>⏳ دەمێ نیکرنێ</th>
             <th>⚙️ کار</th>
           </tr>
         </thead>
@@ -304,30 +306,34 @@
         let wheelsData = [];
 
         function saveWheel() {
-            const code = document.getElementById("wheelCode").value.trim();
-            const color = document.getElementById("wheelColor").value.trim();
-            const size = document.getElementById("wheelSize").value.trim();
-            const buy = document.getElementById("buyAmount").value.trim();
-            const sell = document.getElementById("sellAmount").value.trim();
-            const quantity = document.getElementById("quantity").value.trim();
+  const code = document.getElementById("wheelCode").value.trim();
+  const color = document.getElementById("wheelColor").value.trim();
+  const size = document.getElementById("wheelSize").value.trim();
+  const buy = document.getElementById("buyAmount").value.trim();
+  const sell = document.getElementById("sellAmount").value.trim();
+  const quantity = document.getElementById("quantity").value.trim();
 
-            if (code && color && size && buy && sell && quantity) {
-                db.ref("wheels").push({
-                    code,
-                    color,
-                    size,
-                    buy: parseFloat(buy),
-                    sell: parseFloat(sell),
-                    quantity: parseInt(quantity)
-                }).then(() => {
-                    alert("ویل ب سەرکەفتیانە هاتە زێدەکرن!");
-                    clearInputs();
-                    loadWheels();
-                }).catch(error => console.error("Error:", error));
-            } else {
-                alert("پێدفیە هەمی خانەیان تژی بکەی!");
-            }
-        }
+  if (code && color && size && buy && sell && quantity) {
+    const now = Date.now(); // current timestamp
+
+    db.ref("wheels").push({
+      code,
+      color,
+      size,
+      buy: parseFloat(buy),
+      sell: parseFloat(sell),
+      quantity: parseInt(quantity),
+      createdAt: now,
+      updatedAt: now
+    }).then(() => {
+      alert("ویل ب سەرکەفتیانە هاتە زێدەکرن!");
+      clearInputs();
+      loadWheels();
+    }).catch(error => console.error("Error:", error));
+  } else {
+    alert("پێدفیە هەمی خانەیان تژی بکەی!");
+  }
+}
 
         function clearInputs() {
             document.getElementById("wheelCode").value = "";
@@ -419,6 +425,10 @@ function createWheelItem(key, data, container) {
   const row = document.createElement("tr");
   row.id = `wheel-${key}`;
 
+  // Format the dates if they exist
+  const createdDate = data.createdAt ? new Date(data.createdAt).toLocaleString() : "-";
+  const updatedDate = data.updatedAt ? new Date(data.updatedAt).toLocaleString() : "-";
+
   row.innerHTML = `
     <td id="code-${key}">${data.code || '-'}</td>
     <td id="color-${key}">${data.color || '-'}</td>
@@ -426,6 +436,8 @@ function createWheelItem(key, data, container) {
     <td id="buy-${key}">${parseFloat(data.buy || 0).toLocaleString()}</td>
     <td id="sell-${key}">${parseFloat(data.sell || 0).toLocaleString()}</td>
     <td id="quantity-${key}">${parseInt(data.quantity || 0)}</td>
+    <td>${createdDate}</td>
+    <td>${updatedDate}</td>
     <td>
       <button class="edit-btn" id="editBtn-${key}">✏️</button>
       <button class="delete-btn" id="deleteBtn-${key}">🗑</button>
@@ -438,6 +450,7 @@ function createWheelItem(key, data, container) {
   document.getElementById(`editBtn-${key}`).onclick = () => editWheel(key);
   document.getElementById(`deleteBtn-${key}`).onclick = () => deleteWheel(key);
 }
+
 
 
 function editWheel(key) {
@@ -464,30 +477,34 @@ function editWheel(key) {
     deleteBtn.onclick = () => loadWheels();
 }
 
-        function saveEditWheel(key) {
-            const code = document.getElementById(`editCode-${key}`).value.trim();
-            const color = document.getElementById(`editColor-${key}`).value.trim();
-            const size = document.getElementById(`editSize-${key}`).value.trim();
-            const buy = document.getElementById(`editBuy-${key}`).value.trim();
-            const sell = document.getElementById(`editSell-${key}`).value.trim();
-            const quantity = document.getElementById(`editQuantity-${key}`).value.trim();
+function saveEditWheel(key) {
+  const code = document.getElementById(`editCode-${key}`).value.trim();
+  const color = document.getElementById(`editColor-${key}`).value.trim();
+  const size = document.getElementById(`editSize-${key}`).value.trim();
+  const buy = document.getElementById(`editBuy-${key}`).value.trim();
+  const sell = document.getElementById(`editSell-${key}`).value.trim();
+  const quantity = document.getElementById(`editQuantity-${key}`).value.trim();
 
-            if (code && color && size && buy && sell && quantity) {
-                db.ref("wheels").child(key).update({
-                    code,
-                    color,
-                    size,
-                    buy: parseFloat(buy),
-                    sell: parseFloat(sell),
-                    quantity: parseInt(quantity)
-                }).then(() => {
-                    alert(" ویل ب سەرکەفتیانە هاتە نیکرن!");
-                    loadWheels();
-                }).catch(error => console.error("Error:", error));
-            } else {
-                alert("پێدفیە هەمی خانەیان تژی بکەی!");
-            }
-        }
+  if (code && color && size && buy && sell && quantity) {
+    const now = Date.now(); // current timestamp
+
+    db.ref("wheels").child(key).update({
+      code,
+      color,
+      size,
+      buy: parseFloat(buy),
+      sell: parseFloat(sell),
+      quantity: parseInt(quantity),
+      updatedAt: now
+    }).then(() => {
+      alert("ویل ب سەرکەفتیانە هاتە نیکرن!");
+      loadWheels();
+    }).catch(error => console.error("Error:", error));
+  } else {
+    alert("پێدفیە هەمی خانەیان تژی بکەی!");
+  }
+}
+
 
         function deleteWheel(key) {
     if (confirm("تە دفێت ویل بهێتە ژێبرن؟")) {
@@ -565,41 +582,41 @@ function editWheel(key) {
         };
     </script>
     <script>
-  function showNetworkWarning(isOffline) {
-      const warningId = "network-warning";
-  
-      if (isOffline) {
-          // Show warning message if not already shown
-          if (!document.getElementById(warningId)) {
-              const warning = document.createElement("div");
-              warning.id = warningId;
-              warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
-              warning.style.position = "fixed";
-              warning.style.top = "0";
-              warning.style.left = "0";
-              warning.style.width = "100%";
-              warning.style.backgroundColor = "#e74c3c";
-              warning.style.color = "white";
-              warning.style.textAlign = "center";
-              warning.style.padding = "12px";
-              warning.style.zIndex = "9999";
-              warning.style.fontSize = "18px";
-              warning.style.fontWeight = "bold";
-              document.body.appendChild(warning);
-          }
-      } else {
-          // Remove the warning if it exists
-          const existing = document.getElementById(warningId);
-          if (existing) existing.remove();
-      }
-  }
-  
-  // Initial check on load
-  showNetworkWarning(!navigator.onLine);
-  
-  // Listen for connection status changes
-  window.addEventListener('online', () => showNetworkWarning(false));
-  window.addEventListener('offline', () => showNetworkWarning(true));
-  </script>
+        function showNetworkWarning(isOffline) {
+            const warningId = "network-warning";
+        
+            if (isOffline) {
+                // Show warning message if not already shown
+                if (!document.getElementById(warningId)) {
+                    const warning = document.createElement("div");
+                    warning.id = warningId;
+                    warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
+                    warning.style.position = "fixed";
+                    warning.style.top = "0";
+                    warning.style.left = "0";
+                    warning.style.width = "100%";
+                    warning.style.backgroundColor = "#e74c3c";
+                    warning.style.color = "white";
+                    warning.style.textAlign = "center";
+                    warning.style.padding = "12px";
+                    warning.style.zIndex = "9999";
+                    warning.style.fontSize = "18px";
+                    warning.style.fontWeight = "bold";
+                    document.body.appendChild(warning);
+                }
+            } else {
+                // Remove the warning if it exists
+                const existing = document.getElementById(warningId);
+                if (existing) existing.remove();
+            }
+        }
+        
+        // Initial check on load
+        showNetworkWarning(!navigator.onLine);
+        
+        // Listen for connection status changes
+        window.addEventListener('online', () => showNetworkWarning(false));
+        window.addEventListener('offline', () => showNetworkWarning(true));
+        </script>
 </body>
 </html>
