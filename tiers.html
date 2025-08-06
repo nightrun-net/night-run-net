@@ -275,6 +275,8 @@
             <th>💰 بهایە کرینێ</th>
             <th>💵 بهایە فروتنێ</th>
             <th>📦 ژمارە</th>
+            <th>🕘 دەمێ زێدەکرنێ</th>
+            <th>⏳ دەمێ نیکرنێ</th>
             <th>⚙️ کار</th>
           </tr>
         </thead>
@@ -303,36 +305,38 @@
         let tiersData = [];
 
         function saveTier() {
-            const name = document.getElementById("tierName").value.trim();
-            const data = document.getElementById("tierData").value.trim();
-            const size = document.getElementById("tierSize").value.trim();
-            const buy = document.getElementById("buyPrice").value.trim();
-            const sell = document.getElementById("sellPrice").value.trim();
-            const quantity = document.getElementById("quantity").value.trim();
+  const name = document.getElementById("tierName").value.trim();
+  const data = document.getElementById("tierData").value.trim();
+  const size = document.getElementById("tierSize").value.trim();
+  const buy = document.getElementById("buyPrice").value.trim();
+  const sell = document.getElementById("sellPrice").value.trim();
+  const quantity = document.getElementById("quantity").value.trim();
 
-            if (!/^\d{4}$/.test(data)) {
+  if (!/^\d{4}$/.test(data)) {
     alert("پێدفیە مێژویا تایرێ 4 ژمارە بن!");
     return;
+  }
+
+  if (name && data && size && buy && sell && quantity) {
+    const now = Date.now(); // current timestamp in ms
+    db.ref("tiers").push({
+      name,
+      data,
+      size,
+      buy: parseFloat(buy),
+      sell: parseFloat(sell),
+      quantity: parseInt(quantity),
+      createdAt: now,
+      updatedAt: now
+    }).then(() => {
+      alert("تایرە ب سەرکەفتیانە هاتە زێدەکرن!");
+      clearInputs();
+      loadTiers();
+    }).catch(error => console.error("Error:", error));
+  } else {
+    alert("پێدفیە هەمی خانەیان تژی بکەی!");
+  }
 }
-
-
-            if (name && data && size && buy && sell && quantity) {
-                db.ref("tiers").push({
-                    name,
-                    data,
-                    size,
-                    buy: parseFloat(buy),
-                    sell: parseFloat(sell),
-                    quantity: parseInt(quantity)
-                }).then(() => {
-                    alert("تایرە ب سەرکەفتیانە هاتە زێدەکرن!");
-                    clearInputs();
-                    loadTiers();
-                }).catch(error => console.error("Error:", error));
-            } else {
-                alert("پێدفیە هەمی خانەیان تژی بکەی!");
-            }
-        }
 
         function clearInputs() {
             document.getElementById("tierName").value = "";
@@ -343,20 +347,7 @@
             document.getElementById("quantity").value = "";
         }
 
-
-
-function parseTireSize(sizeStr) {
-  if (!sizeStr) return [0, 0, 0];
-  // Handle cases where the last part may contain letters, e.g., "20LT"
-  const parts = sizeStr.split("/");
-  const lastPart = parts[2] || "0";
-  // Extract number only from last part (e.g. "20LT" -> 20)
-  const rim = parseInt(lastPart.match(/\d+/)[0], 10);
-  return [Number(parts[0]), Number(parts[1]), rim];
-}
-
-
-function loadTiers() {
+        function loadTiers() {
   const tierList = document.getElementById("tierList");
   if (!tierList) return;
 
@@ -382,47 +373,51 @@ function loadTiers() {
       totalSell += (parseFloat(data.sell) || 0) * (parseInt(data.quantity) || 0);
     });
 
-    // Sort by size
-    tiersData.sort((a, b) => {
-  const rimA = parseTireSize(a.size)[2];
-  const rimB = parseTireSize(b.size)[2];
-  return rimA - rimB; // ascending order by rim size
-    });
+    // ✅ Sort by width, then rim size
+// Sort by rim size first, then width
+tiersData.sort((a, b) => {
+  const [widthA, , rimA] = parseTireSize(a.size);
+  const [widthB, , rimB] = parseTireSize(b.size);
+  return rimA - rimB || widthA - widthB;
+});
+
 
     tierList.innerHTML = ""; // clear again
 
-    tiersData.forEach(({key, ...data}) => {
+    tiersData.forEach(({ key, ...data }) => {
       createTierItem(key, data, tierList);
     });
 
     const totalsSection = document.getElementById("totalsSection");
-if (totalsSection) {
-  if (tiersData.length > 0) {
-    totalsSection.style.display = "block"; // or "flex" as you like
-    document.getElementById("totalBuy").innerText = totalBuy.toLocaleString();
-    document.getElementById("totalSell").innerText = totalSell.toLocaleString();
+    if (totalsSection) {
+      if (tiersData.length > 0) {
+        totalsSection.style.display = "block"; // or "flex"
+        document.getElementById("totalBuy").innerText = totalBuy.toLocaleString();
+        document.getElementById("totalSell").innerText = totalSell.toLocaleString();
 
-    // Optionally update Firebase totals
-    db.ref("totals/tiers").set({
-      totalBuy: totalBuy,
-      totalSell: totalSell
-    });
-  } else {
-    totalsSection.style.display = "none";
-    db.ref("totals/tiers").set({
-      totalBuy: 0,
-      totalSell: 0
-    });
-  }
-}
-
+        // Update Firebase totals
+        db.ref("totals/tiers").set({
+          totalBuy: totalBuy,
+          totalSell: totalSell
+        });
+      } else {
+        totalsSection.style.display = "none";
+        db.ref("totals/tiers").set({
+          totalBuy: 0,
+          totalSell: 0
+        });
+      }
+    }
   });
 }
 
-
 function createTierItem(key, data, container) {
   const row = document.createElement("tr");
-  row.id = `tier-row-${key}`;  // 🔴 This is required for editTier() to work
+  row.id = `tier-row-${key}`;
+
+  // Format timestamps to readable date string
+  const createdDate = data.createdAt ? new Date(data.createdAt).toLocaleString() : "-";
+  const updatedDate = data.updatedAt ? new Date(data.updatedAt).toLocaleString() : "-";
 
   row.innerHTML = `
     <td id="name-${key}">${data.name}</td>
@@ -431,6 +426,8 @@ function createTierItem(key, data, container) {
     <td id="buy-${key}">${parseFloat(data.buy).toLocaleString()} $</td>
     <td id="sell-${key}">${parseFloat(data.sell).toLocaleString()} $</td>
     <td id="quantity-${key}">${parseInt(data.quantity)}</td>
+    <td>${createdDate}</td>
+    <td>${updatedDate}</td>
     <td>
       <button class="btn-table edit" onclick="editTier('${key}')">✏️</button>
       <button class="btn-table delete" onclick="deleteTier('${key}')">🗑</button>
@@ -439,6 +436,22 @@ function createTierItem(key, data, container) {
 
   container.appendChild(row);
 }
+
+function parseTireSize(sizeStr) {
+  if (!sizeStr) return [0, 0, 0];
+
+  const parts = sizeStr.split("/");
+  const width = Number(parts[0]) || 0;
+  const aspect = Number(parts[1]) || 0;
+
+  const lastPart = parts[2] || "";
+  const rimMatch = lastPart.match(/\d+/);
+  const rim = rimMatch ? parseInt(rimMatch[0], 10) : 0;
+
+  return [width, aspect, rim];
+}
+
+
 
 
 
@@ -476,13 +489,16 @@ function saveEditTier(key) {
   }
 
   if (name && data && size && buy && sell && quantity) {
+    const now = Date.now(); // current timestamp
+
     db.ref("tiers").child(key).update({
       name,
       data,
       size,
       buy: parseFloat(buy),
       sell: parseFloat(sell),
-      quantity: parseInt(quantity)
+      quantity: parseInt(quantity),
+      updatedAt: now // update the updatedAt timestamp
     }).then(() => {
       alert("✅ تایرە ب سەرکەفتیانە هاتە نیکرن");
       loadTiers();
@@ -491,6 +507,7 @@ function saveEditTier(key) {
     alert("پێدفیە هەمی خانەیان تژی بکەی!");
   }
 }
+
         function deleteTier(key) {
             if (confirm("تە دفێت تایرە بهێتە ژێبرن?")) {
                 db.ref("tiers").child(key).remove()
@@ -540,41 +557,41 @@ function saveEditTier(key) {
         loadTiers();
     </script>
     <script>
-  function showNetworkWarning(isOffline) {
-      const warningId = "network-warning";
-  
-      if (isOffline) {
-          // Show warning message if not already shown
-          if (!document.getElementById(warningId)) {
-              const warning = document.createElement("div");
-              warning.id = warningId;
-              warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
-              warning.style.position = "fixed";
-              warning.style.top = "0";
-              warning.style.left = "0";
-              warning.style.width = "100%";
-              warning.style.backgroundColor = "#e74c3c";
-              warning.style.color = "white";
-              warning.style.textAlign = "center";
-              warning.style.padding = "12px";
-              warning.style.zIndex = "9999";
-              warning.style.fontSize = "18px";
-              warning.style.fontWeight = "bold";
-              document.body.appendChild(warning);
+      function showNetworkWarning(isOffline) {
+          const warningId = "network-warning";
+      
+          if (isOffline) {
+              // Show warning message if not already shown
+              if (!document.getElementById(warningId)) {
+                  const warning = document.createElement("div");
+                  warning.id = warningId;
+                  warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
+                  warning.style.position = "fixed";
+                  warning.style.top = "0";
+                  warning.style.left = "0";
+                  warning.style.width = "100%";
+                  warning.style.backgroundColor = "#e74c3c";
+                  warning.style.color = "white";
+                  warning.style.textAlign = "center";
+                  warning.style.padding = "12px";
+                  warning.style.zIndex = "9999";
+                  warning.style.fontSize = "18px";
+                  warning.style.fontWeight = "bold";
+                  document.body.appendChild(warning);
+              }
+          } else {
+              // Remove the warning if it exists
+              const existing = document.getElementById(warningId);
+              if (existing) existing.remove();
           }
-      } else {
-          // Remove the warning if it exists
-          const existing = document.getElementById(warningId);
-          if (existing) existing.remove();
       }
-  }
-  
-  // Initial check on load
-  showNetworkWarning(!navigator.onLine);
-  
-  // Listen for connection status changes
-  window.addEventListener('online', () => showNetworkWarning(false));
-  window.addEventListener('offline', () => showNetworkWarning(true));
-  </script>
+      
+      // Initial check on load
+      showNetworkWarning(!navigator.onLine);
+      
+      // Listen for connection status changes
+      window.addEventListener('online', () => showNetworkWarning(false));
+      window.addEventListener('offline', () => showNetworkWarning(true));
+      </script>
 </body>
 </html>
