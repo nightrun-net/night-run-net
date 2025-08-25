@@ -196,6 +196,14 @@
   border-radius: 5px;
   cursor: pointer;
 }
+
+.highlight-added {
+  background-color: #d4edda !important; /* green */
+}
+.highlight-updated {
+  background-color: #cce5ff !important; /* blue */
+}
+
     </style>
 </head>
 <body>
@@ -205,10 +213,13 @@
             <span>بهایێ فروتنا ویلان : $ <span id="totalSell">0</span></span>
         </div>
 
-        <br>
-        <br>
-        <br>
+        <br><br><br>
+        <div id="highlightNotes" style="margin: 1em 0; font-family: Arial, sans-serif; text-align: center;" >
+            <p><span style="display:inline-block; width: 20px; height: 20px; background-color: #d4edda; border: 1px solid #c3e6cb; margin-right: 8px; vertical-align: middle;"></span>دەمێ زێدەکرنێ ( ٣٠ خولەک و دهێتە راکرن رەنگ)  </p>
+            <p><span style="display:inline-block; width: 20px; height: 20px; background-color: #cce5ff; border: 1px solid #b8daff; margin-right: 8px; vertical-align: middle;"></span> دەمێ نیکرنێ ( ٣٠ خولەک و دهێتە راکرن رەنگ)  </p>
+        </div>
         
+        <br><br><br>
 
     <div class="container">
         <h2>لیستا ویلان</h2>
@@ -304,7 +315,6 @@
         const db = firebase.database();
 
         let wheelsData = [];
-
         function saveWheel() {
   const code = document.getElementById("wheelCode").value.trim();
   const color = document.getElementById("wheelColor").value.trim();
@@ -314,7 +324,8 @@
   const quantity = document.getElementById("quantity").value.trim();
 
   if (code && color && size && buy && sell && quantity) {
-    const now = Date.now(); // current timestamp
+    const now = Date.now();
+    const highlightUntil = now + 30 * 60 * 1000; // 30 minutes from now
 
     db.ref("wheels").push({
       code,
@@ -324,7 +335,9 @@
       sell: parseFloat(sell),
       quantity: parseInt(quantity),
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      highlightUntil,
+      highlightType: "added"
     }).then(() => {
       alert("ویل ب سەرکەفتیانە هاتە زێدەکرن!");
       clearInputs();
@@ -344,88 +357,89 @@
             document.getElementById("quantity").value = "";
         }
 
-
         function loadWheels() {
-    const wheelList = document.getElementById("wheelList");
-    if (!wheelList) return;  // Safety check
+  const wheelList = document.getElementById("wheelList");
+  if (!wheelList) return;
 
+  wheelList.innerHTML = "";
+  wheelsData = [];
+
+  let totalBuy = 0;
+  let totalSell = 0;
+
+  const now = Date.now();
+
+  db.ref("wheels").on("value", snapshot => {
     wheelList.innerHTML = "";
     wheelsData = [];
 
-    // Reset totals BEFORE listening to data snapshot
-    let totalBuy = 0;
-    let totalSell = 0;
+    totalBuy = 0;
+    totalSell = 0;
 
-    db.ref("wheels").on("value", snapshot => {
-        wheelList.innerHTML = "";
-        wheelsData = [];
+    let wheelsArray = [];
 
-        // Reset totals again inside the snapshot listener
-        totalBuy = 0;
-        totalSell = 0;
+    snapshot.forEach(childSnapshot => {
+      const key = childSnapshot.key;
+      const data = childSnapshot.val();
 
-        // Gather all wheels in an array first
-        let wheelsArray = [];
-
-        snapshot.forEach(childSnapshot => {
-            const key = childSnapshot.key;
-            const data = childSnapshot.val();
-
-            wheelsArray.push({ key, ...data });
+      // Cleanup expired highlights
+      if (data.highlightUntil && now > data.highlightUntil) {
+        db.ref("wheels/" + key).update({
+          highlightUntil: null,
+          highlightType: null
         });
+        data.highlightUntil = null;
+        data.highlightType = null;
+      }
 
-        // Sort wheels by numeric size ascending
-        wheelsArray.sort((a, b) => {
-            const aSize = parseInt(a.size) || 0;
-            const bSize = parseInt(b.size) || 0;
-            return aSize - bSize;
-        });
-
-        // Now render sorted wheels and calculate totals
-        wheelsArray.forEach(wheel => {
-            wheelsData.push(wheel);
-
-            totalBuy += (parseFloat(wheel.buy) || 0) * (parseInt(wheel.quantity) || 0);
-            totalSell += (parseFloat(wheel.sell) || 0) * (parseInt(wheel.quantity) || 0);
-
-            createWheelItem(wheel.key, wheel, wheelList);
-        });
-
-        // Update totals section and Firebase
-        if (wheelsData.length > 0) {
-            const totalsSection = document.getElementById("totalsSection");
-            if (totalsSection) totalsSection.style.display = "flex";
-
-            const totalBuyElem = document.getElementById("totalBuy");
-            if (totalBuyElem) totalBuyElem.innerText = totalBuy.toLocaleString();
-
-            const totalSellElem = document.getElementById("totalSell");
-            if (totalSellElem) totalSellElem.innerText = totalSell.toLocaleString();
-
-            // Update Firebase totals for wheels
-            db.ref("totals/wheels").set({
-                totalBuy: totalBuy,
-                totalSell: totalSell
-            });
-        } else {
-            const totalsSection = document.getElementById("totalsSection");
-            if (totalsSection) totalsSection.style.display = "none";
-
-            // Clear totals in Firebase when no wheels left
-            db.ref("totals/wheels").set({
-                totalBuy: 0,
-                totalSell: 0
-            });
-        }
+      wheelsArray.push({ key, ...data });
     });
-}
 
+    wheelsArray.sort((a, b) => {
+      const aSize = parseInt(a.size) || 0;
+      const bSize = parseInt(b.size) || 0;
+      return aSize - bSize;
+    });
+
+    wheelsArray.forEach(wheel => {
+      wheelsData.push(wheel);
+
+      totalBuy += (parseFloat(wheel.buy) || 0) * (parseInt(wheel.quantity) || 0);
+      totalSell += (parseFloat(wheel.sell) || 0) * (parseInt(wheel.quantity) || 0);
+
+      createWheelItem(wheel.key, wheel, wheelList);
+    });
+
+    if (wheelsData.length > 0) {
+      const totalsSection = document.getElementById("totalsSection");
+      if (totalsSection) totalsSection.style.display = "flex";
+
+      const totalBuyElem = document.getElementById("totalBuy");
+      if (totalBuyElem) totalBuyElem.innerText = totalBuy.toLocaleString();
+
+      const totalSellElem = document.getElementById("totalSell");
+      if (totalSellElem) totalSellElem.innerText = totalSell.toLocaleString();
+
+      db.ref("totals/wheels").set({
+        totalBuy: totalBuy,
+        totalSell: totalSell
+      });
+    } else {
+      const totalsSection = document.getElementById("totalsSection");
+      if (totalsSection) totalsSection.style.display = "none";
+
+      db.ref("totals/wheels").set({
+        totalBuy: 0,
+        totalSell: 0
+      });
+    }
+  });
+}
 
 function createWheelItem(key, data, container) {
   const row = document.createElement("tr");
   row.id = `wheel-${key}`;
 
-  // Format the dates if they exist
   const createdDate = data.createdAt ? new Date(data.createdAt).toLocaleString() : "-";
   const updatedDate = data.updatedAt ? new Date(data.updatedAt).toLocaleString() : "-";
 
@@ -446,7 +460,16 @@ function createWheelItem(key, data, container) {
 
   container.appendChild(row);
 
-  // Attach event handlers
+  // Add highlight if within 30 minutes
+  const now = Date.now();
+  if (data.highlightUntil && now < data.highlightUntil) {
+    if (data.highlightType === "added") {
+      row.classList.add("highlight-added");
+    } else if (data.highlightType === "updated") {
+      row.classList.add("highlight-updated");
+    }
+  }
+
   document.getElementById(`editBtn-${key}`).onclick = () => editWheel(key);
   document.getElementById(`deleteBtn-${key}`).onclick = () => deleteWheel(key);
 }
@@ -486,7 +509,8 @@ function saveEditWheel(key) {
   const quantity = document.getElementById(`editQuantity-${key}`).value.trim();
 
   if (code && color && size && buy && sell && quantity) {
-    const now = Date.now(); // current timestamp
+    const now = Date.now();
+    const highlightUntil = now + 30 * 60 * 1000; // 30 minutes from now
 
     db.ref("wheels").child(key).update({
       code,
@@ -495,7 +519,9 @@ function saveEditWheel(key) {
       buy: parseFloat(buy),
       sell: parseFloat(sell),
       quantity: parseInt(quantity),
-      updatedAt: now
+      updatedAt: now,
+      highlightUntil,
+      highlightType: "updated"
     }).then(() => {
       alert("ویل ب سەرکەفتیانە هاتە نیکرن!");
       loadWheels();
@@ -504,7 +530,6 @@ function saveEditWheel(key) {
     alert("پێدفیە هەمی خانەیان تژی بکەی!");
   }
 }
-
 
         function deleteWheel(key) {
     if (confirm("تە دفێت ویل بهێتە ژێبرن؟")) {
@@ -620,3 +645,4 @@ function saveEditWheel(key) {
         </script>
 </body>
 </html>
+
