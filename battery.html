@@ -197,6 +197,15 @@
   background-color: #f44336;
   color: white;
 }
+
+.highlight-added {
+    background-color: #d4edda !important; /* Light green */
+}
+
+.highlight-updated {
+    background-color: #cce5ff !important; /* Light blue */
+}
+
     </style>
 </head>
 <body>
@@ -207,7 +216,12 @@
     </div>
 
     <br><br><br>
-
+    <div id="highlightNotes" style="margin: 1em 0; font-family: Arial, sans-serif; text-align: center;" >
+      <p><span style="display:inline-block; width: 20px; height: 20px; background-color: #d4edda; border: 1px solid #c3e6cb; margin-right: 8px; vertical-align: middle;"></span>دەمێ زێدەکرنێ ( ٣٠ خولەک و دهێتە راکرن رەنگ)  </p>
+      <p><span style="display:inline-block; width: 20px; height: 20px; background-color: #cce5ff; border: 1px solid #b8daff; margin-right: 8px; vertical-align: middle;"></span> دەمێ نیکرنێ ( ٣٠ خولەک و دهێتە راکرن رەنگ)  </p>
+    </div>
+    
+    <br><br><br>
     <div class="container">
         <h2>لیستا پاتریان</h2>
 
@@ -277,6 +291,8 @@
         <th>💰 کرین</th>
         <th>💵 فروتن</th>
         <th>📦 ژمارە</th>
+        <th>🕘 دەمێ زێدەکرنێ</th>
+        <th>⏳ دەمێ نیکرنێ</th>
         <th>⚙️ کار</th>
       </tr>
     </thead>
@@ -306,31 +322,36 @@
         let batteriesData = [];
 
         function saveBattery() {
-            const name = document.getElementById("batteryName").value.trim();
-            const volt = document.getElementById("batteryVolt").value.trim();
-            const buy = document.getElementById("buyPrice").value.trim();
-            const sell = document.getElementById("sellPrice").value.trim();
-            const quantity = document.getElementById("quantity").value.trim();
-            const warranty = document.getElementById("batteryWarranty").value.trim();
+    const name = document.getElementById("batteryName").value.trim();
+    const volt = document.getElementById("batteryVolt").value.trim();
+    const buy = document.getElementById("buyPrice").value.trim();
+    const sell = document.getElementById("sellPrice").value.trim();
+    const quantity = document.getElementById("quantity").value.trim();
+    const warranty = document.getElementById("batteryWarranty").value.trim();
 
+    if (name && volt && buy && sell && quantity) {
+        const now = Date.now(); // Timestamp in milliseconds
+        const highlightUntil = now + 30 * 60 * 1000; // 30 minutes from now
+        db.ref("batteries").push({
+            name,
+            volt,
+            warranty,
+            buy: parseFloat(buy),
+            sell: parseFloat(sell),
+            quantity: parseInt(quantity),
+            createdAt: now,
+            highlightUntil,
+            highlightType: "added"
+        }).then(() => {
+            alert("پاتری ب سەرکەفتیانە هاتە زێدەکرن!");
+            clearInputs();
+            loadBatteries();
+        }).catch(error => console.error("Error:", error));
+    } else {
+        alert("پێدفیە هەمی خانەیان تژی بکەی!");
+    }
+}
 
-            if (name && volt && buy && sell && quantity) {
-                db.ref("batteries").push({
-                name,
-                volt,
-                warranty,
-                buy: parseFloat(buy),
-                sell: parseFloat(sell),
-                quantity: parseInt(quantity)
-                }).then(() => {
-                    alert(" پاتری ب سەرکەفتیانە هاتە زێدەکرن!");
-                    clearInputs();
-                    loadBatteries();
-                }).catch(error => console.error("Error:", error));
-            } else {
-                alert("پێدفیە هەمی خانەیان تژی بکەی!");
-            }
-        }
 
         function clearInputs() {
             document.getElementById("batteryName").value = "";
@@ -351,6 +372,8 @@
     let totalBuy = 0;
     let totalSell = 0;
 
+    const now = Date.now();
+
     db.ref("batteries").on("value", snapshot => {
         batteryList.innerHTML = "";
         batteriesData = [];
@@ -360,6 +383,17 @@
         snapshot.forEach(childSnapshot => {
             const key = childSnapshot.key;
             const data = childSnapshot.val();
+
+            // Cleanup expired highlights
+            if (data.highlightUntil && now > data.highlightUntil) {
+                db.ref("batteries/" + key).update({
+                    highlightUntil: null,
+                    highlightType: null
+                });
+                data.highlightUntil = null;
+                data.highlightType = null;
+            }
+
             batteryArray.push({ key, ...data });
         });
 
@@ -389,11 +423,17 @@
         }
     });
 }
+
         function formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
+    function formatTimestamp(ts) {
+    if (!ts) return "-";
+    const date = new Date(ts);
+    return date.toLocaleString(); // Adjust format if needed
+}
 
-    function createBatteryItem(key, data, container) {
+function createBatteryItem(key, data, container) {
     const row = document.createElement("tr");
     row.id = `battery-${key}`;
 
@@ -404,6 +444,8 @@
         <td id="buy-${key}">${parseFloat(data.buy).toLocaleString()}</td>
         <td id="sell-${key}">${parseFloat(data.sell).toLocaleString()}</td>
         <td id="quantity-${key}">${parseInt(data.quantity)}</td>
+        <td>${formatTimestamp(data.createdAt)}</td>
+        <td>${formatTimestamp(data.updatedAt || "-")}</td>
         <td>
             <button class="edit-btn" id="editBatteryBtn-${key}"><i class="fas fa-edit"></i></button>
             <button class="delete-btn" id="deleteBatteryBtn-${key}"><i class="fas fa-trash"></i></button>
@@ -411,9 +453,19 @@
     `;
     container.appendChild(row);
 
+    const now = Date.now();
+    if (data.highlightUntil && now < data.highlightUntil) {
+        if (data.highlightType === "added") {
+            row.classList.add("highlight-added");
+        } else if (data.highlightType === "updated") {
+            row.classList.add("highlight-updated");
+        }
+    }
+
     document.getElementById(`editBatteryBtn-${key}`).onclick = () => editBattery(key);
     document.getElementById(`deleteBatteryBtn-${key}`).onclick = () => deleteBattery(key);
 }
+
 
 function editBattery(key) {
     const battery = batteriesData.find(b => b.key === key);
@@ -447,13 +499,18 @@ function saveEditBattery(key) {
     const quantity = document.getElementById(`editQuantity-${key}`).value.trim();
 
     if (name && volt && buy && sell && quantity) {
+        const now = Date.now();
+        const highlightUntil = now + 30 * 60 * 1000;
         db.ref("batteries/" + key).update({
             name,
             volt,
             warranty,
             buy: parseFloat(buy),
             sell: parseFloat(sell),
-            quantity: parseInt(quantity)
+            quantity: parseInt(quantity),
+            updatedAt: now,
+            highlightUntil,
+            highlightType: "updated"
         }).then(() => {
             alert("پاتەری ب سەرکەفتیانە هاتە نیکرن!");
             loadBatteries();
@@ -461,7 +518,7 @@ function saveEditBattery(key) {
     } else {
         alert("پێدفیە هەمی خانەیان تژی بکەی!");
     }
-    }
+}
 
         function deleteBattery(key) {
             if (confirm(" تە دفێت پاتری بهێتە ژێبرن ؟")) {
@@ -508,41 +565,41 @@ function saveEditBattery(key) {
         window.onload = loadBatteries;
     </script>
     <script>
-  function showNetworkWarning(isOffline) {
-      const warningId = "network-warning";
-  
-      if (isOffline) {
-          // Show warning message if not already shown
-          if (!document.getElementById(warningId)) {
-              const warning = document.createElement("div");
-              warning.id = warningId;
-              warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
-              warning.style.position = "fixed";
-              warning.style.top = "0";
-              warning.style.left = "0";
-              warning.style.width = "100%";
-              warning.style.backgroundColor = "#e74c3c";
-              warning.style.color = "white";
-              warning.style.textAlign = "center";
-              warning.style.padding = "12px";
-              warning.style.zIndex = "9999";
-              warning.style.fontSize = "18px";
-              warning.style.fontWeight = "bold";
-              document.body.appendChild(warning);
-          }
-      } else {
-          // Remove the warning if it exists
-          const existing = document.getElementById(warningId);
-          if (existing) existing.remove();
-      }
-  }
-  
-  // Initial check on load
-  showNetworkWarning(!navigator.onLine);
-  
-  // Listen for connection status changes
-  window.addEventListener('online', () => showNetworkWarning(false));
-  window.addEventListener('offline', () => showNetworkWarning(true));
-  </script>
+        function showNetworkWarning(isOffline) {
+            const warningId = "network-warning";
+        
+            if (isOffline) {
+                // Show warning message if not already shown
+                if (!document.getElementById(warningId)) {
+                    const warning = document.createElement("div");
+                    warning.id = warningId;
+                    warning.innerText = "📡 ئەنترنێت هاتە ژ دەست دان، هیچ پێزانین تومارنابن ! یا پێدڤیە ئەنترنێت هەبیت بو کارکرنێ !.";
+                    warning.style.position = "fixed";
+                    warning.style.top = "0";
+                    warning.style.left = "0";
+                    warning.style.width = "100%";
+                    warning.style.backgroundColor = "#e74c3c";
+                    warning.style.color = "white";
+                    warning.style.textAlign = "center";
+                    warning.style.padding = "12px";
+                    warning.style.zIndex = "9999";
+                    warning.style.fontSize = "18px";
+                    warning.style.fontWeight = "bold";
+                    document.body.appendChild(warning);
+                }
+            } else {
+                // Remove the warning if it exists
+                const existing = document.getElementById(warningId);
+                if (existing) existing.remove();
+            }
+        }
+        
+        // Initial check on load
+        showNetworkWarning(!navigator.onLine);
+        
+        // Listen for connection status changes
+        window.addEventListener('online', () => showNetworkWarning(false));
+        window.addEventListener('offline', () => showNetworkWarning(true));
+        </script>
 </body>
 </html>
