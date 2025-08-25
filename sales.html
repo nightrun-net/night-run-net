@@ -176,7 +176,8 @@
 
     <label><input type="checkbox" class="checkbox" id="wheelCheck" onchange="toggleSection('wheelSection')"/>  فروتنا ویلان</label>
     <div id="wheelSection" class="section" style="display:none;">
-      <label> نافێ ویلی:</label>
+      <label>قەبارەی ویلی:</label>
+      <input type="text" id="wheelSizeFilter" placeholder="کودێ ویلی" oninput="fetchItems('wheel')" /> 
       <select id="wheelItem" onchange="autoFillPrice('wheel')"></select>
 
       <label> بهایێ فروتنێ:</label>
@@ -191,7 +192,9 @@
 
     <label><input type="checkbox" class="checkbox" id="tierCheck" onchange="toggleSection('tierSection')"/>  فروتنا تایران</label>
     <div id="tierSection" class="section" style="display:none;">
-      <label> نافێ تایرێ:</label>
+      
+      <label>قەبارێ تایران:</label>
+      <input type="text" id="tierSizeFilter" placeholder="قەبارە بنڤێسە" oninput="filterTierItems()" />
       <select id="tierItem" onchange="autoFillPrice('tier')"></select>
 
       <label> بهایێ فروتنێ:</label>
@@ -206,8 +209,10 @@
 
     <label><input type="checkbox" class="checkbox" id="tier2Check" onchange="toggleSection('tier2Section')"/>فروتنا تایران 2</label>
 <div id="tier2Section" class="section" style="display:none;">
-  <label>ناڤێ تایرێ:</label>
-  <select id="tier2Item" onchange="autoFillPrice('tier2')"></select>
+  <!-- Tier 2 filter and dropdown -->
+<label>قەبارێ تایران:</label>
+<input type="text" id="tier2SizeFilter" placeholder="قەبارە بنڤێسە" oninput="filterTier2Items()" />
+<select id="tier2Item" onchange="autoFillPrice('tier2')"></select>
 
   <label> بهای فروتن:</label>
   <input type="number" id="tier2Price" />
@@ -259,6 +264,8 @@
     let currentEditKey = null;
 let originalSaleData = null;
 
+
+
   // ✅ Your Firebase Configuration
   const firebaseConfig = {
     apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
@@ -283,76 +290,67 @@ let originalSaleData = null;
     section.style.display = section.style.display === "none" ? "block" : "none";
     updateFinalTotal();
   }
-  function fetchItems(type) {
+
+ // Cache variables for tier items
+let cachedTierItems = [];
+let cachedTier2Items = [];
+
+// Function to parse tire size (same as yours)
+function parseTireSize(sizeStr) {
+  if (!sizeStr) return [0, 0, 0];
+  const parts = sizeStr.split("/");
+  if (parts.length < 3) return [0, 0, 0];
+
+  // Extract rim size from last part, handling possible letters like '20LT'
+  const rimPart = parts[2];
+  const rimNumberMatch = rimPart.match(/\d+/);
+  const rim = rimNumberMatch ? parseInt(rimNumberMatch[0], 10) : 0;
+
+  return [Number(parts[0]), Number(parts[1]), rim];
+}
+
+// Fetch items from DB and cache/populate depending on type
+function fetchItems(type) {
   const select = document.getElementById(type + "Item");
   select.innerHTML = `<option disabled selected>هەلبژێرە...</option>`;
 
-  const path = type === "wheel" ? "wheels" : "tiers";
+  const path = (type === "wheel") ? "wheels" : "tiers";
 
-  // Helper function to parse tire size and get rim size (last number)
-  function parseTireSize(sizeStr) {
-    if (!sizeStr) return [0, 0, 0];
-    const parts = sizeStr.split("/");
-    if (parts.length < 3) return [0, 0, 0];
-
-    // Extract rim size from last part, handling possible letters like '20LT'
-    const rimPart = parts[2];
-    const rimNumberMatch = rimPart.match(/\d+/);
-    const rim = rimNumberMatch ? parseInt(rimNumberMatch[0], 10) : 0;
-
-    return [Number(parts[0]), Number(parts[1]), rim];
-  }
 
   db.ref(path).once("value", snapshot => {
     const items = [];
 
+    
     snapshot.forEach(child => {
       const data = child.val();
-      const getData = (key, fallback = '') => data[key] || fallback;
 
       items.push({
         key: child.key,
-        name: getData("name"),
-        price: getData("sell", 0),
-        quantity: parseInt(getData("quantity", 0)),
-        size: getData("size"),
-        code: getData("code"),
-        color: getData("color"),
+        name: data.name || '',
+        price: data.sell || 0,
+        quantity: parseInt(data.quantity) || 0,
+        size: data.size || '',
+        code: data.code || '',
+        color: data.color || '',
       });
     });
 
-    // Sort items by rim size (last number in size)
+    // Sort by rim size
     items.sort((a, b) => {
       const rimA = parseTireSize(a.size)[2];
       const rimB = parseTireSize(b.size)[2];
       return rimA - rimB;
     });
 
-    // Append sorted items to select
-    items.forEach(data => {
-      const option = document.createElement("option");
-      option.value = data.name;
-      option.setAttribute("data-price", data.price);
-      option.setAttribute("data-qty", data.quantity);
-      option.setAttribute("data-key", data.key);
-      option.setAttribute("data-size", data.size);
-
-      if (type === "wheel") {
-        option.setAttribute("data-code", data.code);
-        option.setAttribute("data-color", data.color);
-        option.text = ` کۆد ${data.code || 'کۆد نەدراو'} - رەنگ ${data.color || 'رەنگ نەدراو'}  - عدد ${data.quantity}  -  قەبارە ${data.size || 'قەبارە نەدراو'} `;
-      } else {
-        option.setAttribute("data-name", data.name);
-        option.text = ` ناڤ ${data.name} - عدد ${data.quantity} - قەبارە ${data.size || 'قەبارە نەدراو'}`;
-      }
-
-      if (data.quantity <= 0) {
-        option.disabled = true;
-        option.text += " 🚫 (بەردەست نینە )";
-      }
-
-      select.appendChild(option);
-    });
+    if (type === "tier") {
+      cachedTierItems = items;
+      populateTierDropdown(items);
+    } else if (type === "tier2") {
+      cachedTier2Items = items;
+      populateTier2Dropdown(items);
+    } else if (type === "wheel") {
+      populateWheelDropdown(items); // you can implement this similarly if needed
+    }
 
   }).catch(error => {
     console.error("Error fetching items:", error);
@@ -360,6 +358,110 @@ let originalSaleData = null;
   });
 }
 
+function populateWheelDropdown(items) {
+  const select = document.getElementById("wheelItem");
+  const filterValue = document.getElementById("wheelSizeFilter").value.trim().toLowerCase();
+
+  select.innerHTML = `<option disabled selected>هەلبژێرە...</option>`;
+
+  const filtered = filterValue
+    ? items.filter(item => item.code.toLowerCase().includes(filterValue))
+    : items;
+
+  filtered.forEach(data => {
+    const option = document.createElement("option");
+    option.value = data.name;
+    option.setAttribute("data-price", data.price);
+    option.setAttribute("data-qty", data.quantity);
+    option.setAttribute("data-key", data.key);
+    option.setAttribute("data-size", data.size);
+    option.setAttribute("data-code", data.code);
+    option.setAttribute("data-color", data.color);
+
+    option.text = `کۆد ${data.code || 'نەدراو'} - رەنگ ${data.color || 'نەدراو'} - عدد ${data.quantity} - قەبارە ${data.size || 'نەدراو'}`;
+
+    if (data.quantity <= 0) {
+      option.disabled = true;
+      option.text += " 🚫 (بەردەست نینە)";
+    }
+
+    select.appendChild(option);
+  });
+}
+
+
+// Populate Tier 1 dropdown
+function populateTierDropdown(items) {
+  const select = document.getElementById("tierItem");
+  select.innerHTML = `<option disabled selected>هەلبژێرە...</option>`;
+
+  items.forEach(data => {
+    const option = document.createElement("option");
+    option.value = data.name;
+    option.setAttribute("data-name", data.name);
+    option.setAttribute("data-price", data.price);
+    option.setAttribute("data-qty", data.quantity);
+    option.setAttribute("data-key", data.key);
+    option.setAttribute("data-size", data.size);
+    option.text = ` ناڤ ${data.name} - عدد ${data.quantity} - قەبارە ${data.size || 'قەبارە نەدراو'}`;
+
+    if (data.quantity <= 0) {
+      option.disabled = true;
+      option.text += " 🚫 (بەردەست نینە )";
+    }
+
+    select.appendChild(option);
+  });
+}
+
+// Populate Tier 2 dropdown
+function populateTier2Dropdown(items) {
+  const select = document.getElementById("tier2Item");
+  select.innerHTML = `<option disabled selected>هەلبژێرە...</option>`;
+
+  items.forEach(data => {
+    const option = document.createElement("option");
+    option.value = data.name;
+    option.setAttribute("data-price", data.price);
+    option.setAttribute("data-qty", data.quantity);
+    option.setAttribute("data-key", data.key);
+    option.setAttribute("data-size", data.size);
+    option.text = ` ناڤ ${data.name} - عدد ${data.quantity} - قەبارە ${data.size || 'قەبارە نەدراو'}`;
+
+    if (data.quantity <= 0) {
+      option.disabled = true;
+      option.text += " 🚫 (بەردەست نینە )";
+    }
+
+    select.appendChild(option);
+  });
+}
+
+// Filter Tier 1 dropdown based on input
+function filterTierItems() {
+  const filterValue = document.getElementById("tierSizeFilter").value.trim();
+
+  if (!filterValue) {
+    populateTierDropdown(cachedTierItems);
+    return;
+  }
+
+  const filtered = cachedTierItems.filter(item => item.size && item.size.includes(filterValue));
+  populateTierDropdown(filtered);
+}
+
+// Filter Tier 2 dropdown based on input
+function filterTier2Items() {
+  const filterValue = document.getElementById("tier2SizeFilter").value.trim();
+
+  if (!filterValue) {
+    populateTier2Dropdown(cachedTier2Items);
+    return;
+  }
+
+  const filtered = cachedTier2Items.filter(item => item.size && item.size.includes(filterValue));
+  populateTier2Dropdown(filtered);
+}
 
 
 
@@ -383,27 +485,35 @@ let originalSaleData = null;
   updateItemTotal(type);
 }
 
-
-  // ✅ Update Total for Wheels or Tiers
-  function updateItemTotal(type) {
-  const price = parseFloat(document.getElementById(`${type}Price`).value) || 0;
-  const qty = parseInt(document.getElementById(`${type}Qty`).value) || 0;
-
+// ✅ Update Total for Wheels or Tiers
+function updateItemTotal(type) {
+  const priceInput = document.getElementById(`${type}Price`);
+  const qtyInput = document.getElementById(`${type}Qty`);
+  const totalInput = document.getElementById(`${type}Total`);
   const select = document.getElementById(`${type}Item`);
+
+  if (!priceInput || !qtyInput || !totalInput || !select) return;
+
+  const price = parseFloat(priceInput.value) || 0;
+  const qty = parseInt(qtyInput.value) || 0;
+
   const selectedOption = select.options[select.selectedIndex];
+  if (!selectedOption) return;
+
   const stockQty = parseInt(selectedOption.getAttribute("data-qty")) || 0;
 
   if (qty > stockQty) {
     alert(`🚫 بتنێ ${stockQty} عدد ژ فی جوری بەردەستن. نەشێی ${qty} عددا بفروشی.`);
-    document.getElementById(`${type}Qty`).value = "";
-    document.getElementById(`${type}Total`).value = "";
+    qtyInput.value = "";
+    totalInput.value = "";
     return;
   }
 
   const total = price * qty;
-  document.getElementById(`${type}Total`).value = total;
+  totalInput.value = total.toFixed(2); // keep two decimals
   updateFinalTotal();
 }
+
 
   // ✅ Update Final Total Price
   function updateFinalTotal() {
@@ -456,48 +566,66 @@ function applyDiscount() {
 
     const nowISO = new Date().toISOString();
 
+    // Helper to safely get dataset or default values
+    function safeDataset(select, key) {
+      if (!select || !select.options || select.selectedIndex < 0) return "";
+      return select.options[select.selectedIndex].dataset[key] || "";
+    }
+
+    // Helper to safely get input value or default
+    function safeInput(id) {
+      const el = document.getElementById(id);
+      return el && el.value ? el.value : "";
+    }
+
     const sale = {
       customerName,
       customerMobile,
       date: nowISO,
       wheels: wheelChecked
-        ? {
-            code: wheelSelect.options[wheelSelect.selectedIndex].dataset.code,
-            size: wheelSelect.options[wheelSelect.selectedIndex].dataset.size,
-            color: wheelSelect.options[wheelSelect.selectedIndex].dataset.color,
-            price: document.getElementById("wheelPrice").value,
-            qty: document.getElementById("wheelQty").value,
-            total: document.getElementById("wheelTotal").value,
-            key: wheelSelect.options[wheelSelect.selectedIndex].dataset.key,
-            currentQty: wheelSelect.options[wheelSelect.selectedIndex].dataset.qty,
-          }
-        : null,
-      tiers: tierChecked
-        ? {
-            name: tierSelect.options[tierSelect.selectedIndex].dataset.name,
-            size: tierSelect.options[tierSelect.selectedIndex].dataset.size,
-            price: document.getElementById("tierPrice").value,
-            qty: document.getElementById("tierQty").value,
-            total: document.getElementById("tierTotal").value,
-            key: tierSelect.options[tierSelect.selectedIndex].dataset.key,
-            currentQty: tierSelect.options[tierSelect.selectedIndex].dataset.qty,
-          }
-        : null,
-      tier2: tier2Checked
-        ? {
-            name: tier2Select.options[tier2Select.selectedIndex].dataset.name,
-            size: tier2Select.options[tier2Select.selectedIndex].dataset.size,
-            price: document.getElementById("tier2Price").value,
-            qty: document.getElementById("tier2Qty").value,
-            total: document.getElementById("tier2Total").value,
-            key: tier2Select.options[tier2Select.selectedIndex].dataset.key,
-            currentQty: tier2Select.options[tier2Select.selectedIndex].dataset.qty,
-          }
-        : null,
+  ? {
+      code: safeDataset(wheelSelect, "code"),
+      size: safeDataset(wheelSelect, "size"),
+      color: safeDataset(wheelSelect, "color"),
+      price: safeInput("wheelPrice"),
+      qty: safeInput("wheelQty"),
+      total: safeInput("wheelTotal"),
+      key: safeDataset(wheelSelect, "key"),
+      currentQty: safeDataset(wheelSelect, "qty"),
+    }
+  : null,
+
+tiers: tierChecked
+  ? {
+      name: safeDataset(tierSelect, "name"),
+      size: safeDataset(tierSelect, "size"),
+      price: safeInput("tierPrice"),
+      qty: safeInput("tierQty"),
+      total: safeInput("tierTotal"),
+      key: safeDataset(tierSelect, "key"),
+      currentQty: safeDataset(tierSelect, "qty"),
+    }
+  : null,
+
+tier2: tier2Checked
+  ? {
+      name: safeDataset(tier2Select, "name"),
+      size: safeDataset(tier2Select, "size"),
+      price: safeInput("tier2Price"),
+      qty: safeInput("tier2Qty"),
+      total: safeInput("tier2Total"),
+      key: safeDataset(tier2Select, "key"),
+      currentQty: safeDataset(tier2Select, "qty"),
+    }
+  : null,
+
       totalPrice,
       discount,
       finalTotal,
     };
+
+    // Validate sale quantities (optional)
+    // ... you can add checks here if needed ...
 
     const ref = isEdit ? db.ref("sales/" + currentEditKey) : db.ref("sales").push();
 
@@ -507,7 +635,7 @@ function applyDiscount() {
 
       if (originalSaleData.wheels) {
         const key = originalSaleData.wheels.key;
-        const qtyToRestore = parseInt(originalSaleData.wheels.qty, 10);
+        const qtyToRestore = parseInt(originalSaleData.wheels.qty, 10) || 0;
         restorePromises.push(
           db.ref("wheels/" + key + "/quantity")
             .once("value")
@@ -520,7 +648,7 @@ function applyDiscount() {
 
       if (originalSaleData.tiers) {
         const key = originalSaleData.tiers.key;
-        const qtyToRestore = parseInt(originalSaleData.tiers.qty, 10);
+        const qtyToRestore = parseInt(originalSaleData.tiers.qty, 10) || 0;
         restorePromises.push(
           db.ref("tiers/" + key + "/quantity")
             .once("value")
@@ -533,7 +661,7 @@ function applyDiscount() {
 
       if (originalSaleData.tier2) {
         const key = originalSaleData.tier2.key;
-        const qtyToRestore = parseInt(originalSaleData.tier2.qty, 10);
+        const qtyToRestore = parseInt(originalSaleData.tier2.qty, 10) || 0;
         restorePromises.push(
           db.ref("tiers/" + key + "/quantity")
             .once("value")
@@ -555,11 +683,11 @@ function applyDiscount() {
 
     if (sale.wheels) {
       const key = sale.wheels.key;
-      const currentQty = parseInt(sale.wheels.currentQty, 10);
-      const newQty = parseInt(sale.wheels.qty, 10);
+      const currentQty = parseInt(sale.wheels.currentQty, 10) || 0;
+      const newQty = parseInt(sale.wheels.qty, 10) || 0;
       let diff = newQty;
       if (isEdit && originalSaleData?.wheels) {
-        const originalQty = parseInt(originalSaleData.wheels.qty, 10);
+        const originalQty = parseInt(originalSaleData.wheels.qty, 10) || 0;
         diff = newQty - originalQty;
       }
       const updatedQty = currentQty - diff;
@@ -568,11 +696,11 @@ function applyDiscount() {
 
     if (sale.tiers) {
       const key = sale.tiers.key;
-      const currentQty = parseInt(sale.tiers.currentQty, 10);
-      const newQty = parseInt(sale.tiers.qty, 10);
+      const currentQty = parseInt(sale.tiers.currentQty, 10) || 0;
+      const newQty = parseInt(sale.tiers.qty, 10) || 0;
       let diff = newQty;
       if (isEdit && originalSaleData?.tiers) {
-        const originalQty = parseInt(originalSaleData.tiers.qty, 10);
+        const originalQty = parseInt(originalSaleData.tiers.qty, 10) || 0;
         diff = newQty - originalQty;
       }
       const updatedQty = currentQty - diff;
@@ -581,11 +709,11 @@ function applyDiscount() {
 
     if (sale.tier2) {
       const key = sale.tier2.key;
-      const currentQty = parseInt(sale.tier2.currentQty, 10);
-      const newQty = parseInt(sale.tier2.qty, 10);
+      const currentQty = parseInt(sale.tier2.currentQty, 10) || 0;
+      const newQty = parseInt(sale.tier2.qty, 10) || 0;
       let diff = newQty;
       if (isEdit && originalSaleData?.tier2) {
-        const originalQty = parseInt(originalSaleData.tier2.qty, 10);
+        const originalQty = parseInt(originalSaleData.tier2.qty, 10) || 0;
         diff = newQty - originalQty;
       }
       const updatedQty = currentQty - diff;
@@ -608,25 +736,40 @@ function applyDiscount() {
     document.getElementById("finalTotal").value = "";
 
     ["wheel", "tier", "tier2"].forEach(type => {
-      document.getElementById(`${type}Item`).selectedIndex = 0;
-      document.getElementById(`${type}Price`).value = "";
-      document.getElementById(`${type}Qty`).value = "";
-      document.getElementById(`${type}Total`).value = "";
-      document.getElementById(`${type}Check`).checked = false;
-      document.getElementById(`${type}Section`).style.display = "none";
+      const itemSelect = document.getElementById(`${type}Item`);
+      if (itemSelect) itemSelect.selectedIndex = 0;
+
+      const priceInput = document.getElementById(`${type}Price`);
+      if (priceInput) priceInput.value = "";
+
+      const qtyInput = document.getElementById(`${type}Qty`);
+      if (qtyInput) qtyInput.value = "";
+
+      const totalInput = document.getElementById(`${type}Total`);
+      if (totalInput) totalInput.value = "";
+
+      const checkInput = document.getElementById(`${type}Check`);
+      if (checkInput) checkInput.checked = false;
+
+      const sectionDiv = document.getElementById(`${type}Section`);
+      if (sectionDiv) sectionDiv.style.display = "none";
     });
 
+    // Refresh item lists and sales list
     await fetchItems("wheel");
     await fetchItems("tier");
     await fetchItems("tier2");
     loadSales();
 
     alert(isEdit ? "ڤروتن هاتە نیکرن ✅" : "فروتن هاتە تومارکرن!");
+    location.reload();
   } catch (error) {
     console.error("Error saving sale:", error);
     alert("هەڵە ڕویدا لە کاتێکدا کەوتە ژێرخەزنکردن.");
+    location.reload();
   }
 }
+
 
 document.getElementById("searchInput").addEventListener("input", loadSales);
 
@@ -642,8 +785,23 @@ function loadSales() {
     list.innerHTML = "";
     totalSold = 0;
 
+    const salesArray = [];
+
     snapshot.forEach(child => {
       const sale = child.val();
+      sale.key = child.key; // Save the key for edit/delete
+      salesArray.push(sale);
+    });
+
+    // 🔽 Sort by time (most recent at top)
+    salesArray.sort((a, b) => {
+      const timeA = new Date(a.date || 0).getTime();
+      const timeB = new Date(b.date || 0).getTime();
+      return timeB - timeA; // Newest first
+    });
+
+    // 🔁 Loop after sorting
+    salesArray.forEach(sale => {
       const customerName = (sale.customerName || "").toLowerCase();
       const customerMobile = (sale.customerMobile || "").toLowerCase();
 
@@ -696,16 +854,15 @@ function loadSales() {
         `;
       }
 
-      // Show total, discount, and final price
       html += `
         🧾 <strong>بهایێ گشتی:</strong> ${parseFloat(sale.totalPrice || 0).toLocaleString()} $<br>
         💸 <strong>بهایێ ویل و تایرێت کەفن:</strong> ${parseFloat(sale.discount || 0).toLocaleString()} $<br>
         💵 <strong>بهایێ دوماهیکێ:</strong> <span style="color: green;">${parseFloat(sale.finalTotal || 0).toLocaleString()} $</span><br><br>
         🕒 مێژویا فروتنێ: ${(sale.date || '-').substring(0, 10)}<br>
 
-        <button onclick="editSale('${child.key}')" class="btn-modern btn-edit">✏️ دەستکاری</button>
-        <button onclick="deleteSale('${child.key}')" class="btn-modern btn-delete">🗑 ژێبرن</button>
-        <button onclick="printInvoice('${child.key}')" class="btn-modern btn-print">🖨 چاپ کرن</button>
+        <button onclick="editSale('${sale.key}')" class="btn-modern btn-edit">✏️ دەستکاری</button>
+        <button onclick="deleteSale('${sale.key}')" class="btn-modern btn-delete">🗑 ژێبرن</button>
+        <button onclick="printInvoice('${sale.key}')" class="btn-modern btn-print">🖨 چاپ کرن</button>
       `;
 
       div.innerHTML = html;
@@ -722,6 +879,7 @@ function loadSales() {
     });
   });
 }
+
 
 function editSale(saleKey) {
   db.ref("sales/" + saleKey).once("value", snap => {
