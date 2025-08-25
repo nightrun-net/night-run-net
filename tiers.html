@@ -196,6 +196,18 @@
   background-color: #f44336;
   color: white;
 }
+
+
+.highlight-new {
+  background-color: #d4edda !important; /* Light green */
+  transition: background-color 0.5s ease;
+}
+
+.highlight-updated {
+  background-color: #cce5ff !important; /* Light blue */
+  transition: background-color 0.5s ease;
+}
+
     </style>
 </head>
 <body>
@@ -205,6 +217,12 @@
             <span>بهایێ فروتنا تایران : $ <span id="totalSell">0</span></span>
         </div>
 
+        <br><br><br>
+        <div id="highlightNotes" style="margin: 1em 0; font-family: Arial, sans-serif; text-align: center;" >
+          <p><span style="display:inline-block; width: 20px; height: 20px; background-color: #d4edda; border: 1px solid #c3e6cb; margin-right: 8px; vertical-align: middle;"></span>دەمێ زێدەکرنێ ( ٣٠ خولەک و دهێتە راکرن رەنگ)  </p>
+          <p><span style="display:inline-block; width: 20px; height: 20px; background-color: #cce5ff; border: 1px solid #b8daff; margin-right: 8px; vertical-align: middle;"></span> دەمێ نیکرنێ ( ٣٠ خولەک و دهێتە راکرن رەنگ)  </p>
+        </div>
+        
         <br><br><br>
 
     <div class="container">
@@ -318,7 +336,9 @@
   }
 
   if (name && data && size && buy && sell && quantity) {
-    const now = Date.now(); // current timestamp in ms
+    const now = Date.now();
+    const highlightUntil = now + 30 * 60 * 1000; // 30 minutes from now
+
     db.ref("tiers").push({
       name,
       data,
@@ -327,7 +347,9 @@
       sell: parseFloat(sell),
       quantity: parseInt(quantity),
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      highlightUntil,
+      highlightType: "added"
     }).then(() => {
       alert("تایرە ب سەرکەفتیانە هاتە زێدەکرن!");
       clearInputs();
@@ -337,6 +359,7 @@
     alert("پێدفیە هەمی خانەیان تژی بکەی!");
   }
 }
+
 
         function clearInputs() {
             document.getElementById("tierName").value = "";
@@ -415,9 +438,22 @@ function createTierItem(key, data, container) {
   const row = document.createElement("tr");
   row.id = `tier-row-${key}`;
 
-  // Format timestamps to readable date string
+  // Format timestamps
   const createdDate = data.createdAt ? new Date(data.createdAt).toLocaleString() : "-";
   const updatedDate = data.updatedAt ? new Date(data.updatedAt).toLocaleString() : "-";
+
+  // Determine highlight: 30 minutes = 1800000 ms
+  const now = Date.now();
+  const thirtyMinutes = 30 * 60 * 1000;
+
+  let highlightClass = "";
+  if (data.createdAt && now - data.createdAt < thirtyMinutes) {
+    highlightClass = "highlight-new";   // green for new
+  } else if (data.updatedAt && now - data.updatedAt < thirtyMinutes) {
+    highlightClass = "highlight-updated"; // blue for updated
+  }
+
+  row.className = highlightClass;
 
   row.innerHTML = `
     <td id="name-${key}">${data.name}</td>
@@ -595,3 +631,4 @@ function saveEditTier(key) {
       </script>
 </body>
 </html>
+
