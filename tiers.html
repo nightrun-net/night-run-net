@@ -321,7 +321,6 @@
         const db = firebase.database();
 
         let tiersData = [];
-
         function saveTier() {
   const name = document.getElementById("tierName").value.trim();
   const data = document.getElementById("tierData").value.trim();
@@ -337,9 +336,9 @@
 
   if (name && data && size && buy && sell && quantity) {
     const now = Date.now();
-    const highlightUntil = now + 30 * 60 * 1000; // 30 minutes from now
+    const highlightUntil = now + 30 * 60 * 1000;
 
-    db.ref("tiers").push({
+    const tierData = {
       name,
       data,
       size,
@@ -350,15 +349,35 @@
       updatedAt: now,
       highlightUntil,
       highlightType: "added"
-    }).then(() => {
-      alert("تایرە ب سەرکەفتیانە هاتە زێدەکرن!");
-      clearInputs();
-      loadTiers();
-    }).catch(error => console.error("Error:", error));
+    };
+
+    // Save to main 'tiers' database
+    db.ref("tiers").push(tierData)
+      .then(() => {
+        // Also log to 'movements/tiers'
+        const movementEntry = {
+          name: name,
+          quantity: parseInt(quantity),
+          timestamp: now,
+          action: "ADDED"
+        };
+        return db.ref("movements/tiers").push(movementEntry);
+      })
+      .then(() => {
+        alert("تایرە ب سەرکەفتیانە هاتە زێدەکرن!");
+        clearInputs();
+        loadTiers();
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        alert("هەڵەیەک ڕوویدا لە کاتی زێدەکردن!");
+      });
+
   } else {
     alert("پێدفیە هەمی خانەیان تژی بکەی!");
   }
 }
+
 
 
         function clearInputs() {
@@ -525,35 +544,84 @@ function saveEditTier(key) {
   }
 
   if (name && data && size && buy && sell && quantity) {
-    const now = Date.now(); // current timestamp
+    const now = Date.now();
 
-    db.ref("tiers").child(key).update({
-      name,
-      data,
-      size,
-      buy: parseFloat(buy),
-      sell: parseFloat(sell),
-      quantity: parseInt(quantity),
-      updatedAt: now // update the updatedAt timestamp
-    }).then(() => {
-      alert("✅ تایرە ب سەرکەفتیانە هاتە نیکرن");
-      loadTiers();
-    }).catch(error => console.error("Error updating tier:", error));
+    db.ref("tiers").child(key).once("value")
+      .then(snapshot => {
+        const oldData = snapshot.val();
+        if (!oldData) throw new Error("Tier data not found");
+
+        const oldQty = parseInt(oldData.quantity) || 0;
+        const newQty = parseInt(quantity);
+        const qtyDiff = newQty - oldQty;
+
+        return db.ref("tiers").child(key).update({
+          name,
+          data,
+          size,
+          buy: parseFloat(buy),
+          sell: parseFloat(sell),
+          quantity: newQty,
+          updatedAt: now
+        })
+        .then(() => {
+          if (qtyDiff !== 0) {
+            const movementEntry = {
+              name: name,
+              quantity: `(old is ${oldQty}, new is ${newQty}, added is ${qtyDiff})`,
+              timestamp: now,
+              action: "EDITED"
+            };
+            return db.ref("movements/tiers").push(movementEntry);
+          }
+        });
+      })
+      .then(() => {
+        alert("✅ تایرە ب سەرکەفتیانە هاتە نیکرن");
+        loadTiers();
+      })
+      .catch(error => {
+        console.error("Error updating tier:", error);
+        alert("هەڵەیەک ڕوویدا لە کاتی نوێکردنەوە!");
+      });
   } else {
     alert("پێدفیە هەمی خانەیان تژی بکەی!");
   }
 }
 
-        function deleteTier(key) {
-            if (confirm("تە دفێت تایرە بهێتە ژێبرن?")) {
-                db.ref("tiers").child(key).remove()
-                    .then(() => {
-                        alert("تایرە ب سەرکەفتیانە هاتە ژێبرن");
-                        loadTiers();
-                    })
-                    .catch(error => console.error("Error:", error));
-            }
-        }
+
+function deleteTier(key) {
+  if (confirm("تە دفێت تایرە بهێتە ژێبرن?")) {
+    // First, get the tier data before deleting
+    db.ref("tiers").child(key).once("value")
+      .then(snapshot => {
+        const tierData = snapshot.val();
+        if (!tierData) throw new Error("Tier data not found");
+
+        // Delete the tier
+        return db.ref("tiers").child(key).remove()
+          .then(() => {
+            // Add to movements log with DELETED action
+            const movementEntry = {
+              name: tierData.name || "Unknown",
+              quantity: parseInt(tierData.quantity) || 0,
+              timestamp: Date.now(),
+              action: "DELETED"
+            };
+            return db.ref("movements/tiers").push(movementEntry);
+          });
+      })
+      .then(() => {
+        alert("تایرە ب سەرکەفتیانە هاتە ژێبرن");
+        loadTiers();
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        alert("هەڵەیەک ڕوویدا لە کاتی ژێبرن!");
+      });
+  }
+}
+
 
         function searchTiers() {
     const query = document.getElementById("searchInput").value.trim().toLowerCase();
@@ -631,4 +699,3 @@ function saveEditTier(key) {
       </script>
 </body>
 </html>
-
