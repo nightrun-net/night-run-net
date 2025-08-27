@@ -338,7 +338,15 @@
       updatedAt: now,
       highlightUntil,
       highlightType: "added"
-    }).then(() => {
+    }).then(ref => {
+      // Log movement with simple qty
+      db.ref("movements/wheels").push({
+        timestamp: now,
+        name: code,  // or combine code+color for better identification?
+        quantity: quantity,
+        action: "ADDED"
+      });
+
       alert("ویل ب سەرکەفتیانە هاتە زێدەکرن!");
       clearInputs();
       loadWheels();
@@ -347,7 +355,6 @@
     alert("پێدفیە هەمی خانەیان تژی بکەی!");
   }
 }
-        
 
         function clearInputs() {
             document.getElementById("wheelCode").value = "";
@@ -511,74 +518,91 @@ function saveEditWheel(key) {
 
   if (code && color && size && buy && sell && quantity) {
     const now = Date.now();
-    const highlightUntil = now + 30 * 60 * 1000; // 30 minutes from now
 
-    db.ref("wheels").child(key).update({
-      code,
-      color,
-      size,
-      buy: parseFloat(buy),
-      sell: parseFloat(sell),
-      quantity: parseInt(quantity),
-      updatedAt: now,
-      highlightUntil,
-      highlightType: "updated"
-    }).then(() => {
-      alert("ویل ب سەرکەفتیانە هاتە نیکرن!");
-      loadWheels();
-    }).catch(error => console.error("Error:", error));
+    // First, get old quantity
+    db.ref("wheels").child(key).once("value").then(snapshot => {
+      const oldData = snapshot.val();
+      const oldQuantity = oldData?.quantity || 0;
+      const newQuantity = parseInt(quantity);
+      const addedQty = newQuantity - oldQuantity;
+
+      // Update wheel
+      return db.ref("wheels").child(key).update({
+        code,
+        color,
+        size,
+        buy: parseFloat(buy),
+        sell: parseFloat(sell),
+        quantity: newQuantity,
+        updatedAt: now,
+        highlightUntil: now + 30 * 60 * 1000,
+        highlightType: "updated"
+      }).then(() => {
+        // Log movement with old/new qty + added
+        db.ref("movements/wheels").push({
+          timestamp: now,
+          name: code,
+          quantity: `(old is ${oldQuantity}, new is ${newQuantity}) added is ${addedQty}`,
+          action: "EDITED"
+        });
+
+        alert("ویل ب سەرکەفتیانە هاتە نیکرن!");
+        loadWheels();
+      });
+    }).catch(error => {
+      console.error("Error updating wheel:", error);
+      alert("کێشە لە نوێکردنەوە هەیە");
+    });
+
   } else {
     alert("پێدفیە هەمی خانەیان تژی بکەی!");
   }
 }
+function deleteWheel(key) {
+  if (confirm("تە دفێت ویل بهێتە ژێبرن؟")) {
+    const wheelRef = db.ref("wheels").child(key);
 
-        function deleteWheel(key) {
-    if (confirm("تە دفێت ویل بهێتە ژێبرن؟")) {
-        const wheelRef = db.ref("wheels").child(key);
-        const totalsRef = db.ref("totals/wheels");
+    wheelRef.once("value").then(snapshot => {
+      const wheel = snapshot.val();
+      if (!wheel) {
+        alert("ویل نە هاتە دیتن");
+        throw new Error("Wheel not found");
+      }
 
-        wheelRef.once("value").then(snapshot => {
-            const wheel = snapshot.val();
-            if (!wheel) {
-                alert("ویل نە هاتە دیتن");
-                throw new Error("Wheel not found");
-            }
+      const { buy, sell, quantity, code } = wheel;
 
-            const buyPrice = Number(wheel.buyPrice) || 0;
-            const sellPrice = Number(wheel.sellPrice) || 0;
+      // Update totals (you may want to fix your totals logic here)
+      return db.ref("totals/wheels").transaction(current => {
+        if (current === null) return null;
 
-            console.log("Deleting wheel with:", { buyPrice, sellPrice });
+        current.totalBuy = (current.totalBuy || 0) - (buy || 0);
+        current.totalSell = (current.totalSell || 0) - (sell || 0);
 
-            return totalsRef.transaction(current => {
-                if (current === null) {
-                    // totals/wheels doesn't exist
-                    return null; // abort transaction
-                }
+        if (current.totalBuy < 0) current.totalBuy = 0;
+        if (current.totalSell < 0) current.totalSell = 0;
 
-                current.totalBuy = (current.totalBuy || 0) - buyPrice;
-                current.totalSell = (current.totalSell || 0) - sellPrice;
+        return current;
+      }).then(result => {
+        if (!result.committed) throw new Error("Transaction failed.");
 
-                // Optional: Ensure they don’t go negative
-                if (current.totalBuy < 0) current.totalBuy = 0;
-                if (current.totalSell < 0) current.totalSell = 0;
-
-                return current;
-            }).then(result => {
-                if (!result.committed) {
-                    throw new Error("Transaction failed or totals/wheels does not exist.");
-                }
-                // After updating totals, delete the wheel
-                return wheelRef.remove();
-            });
-        }).then(() => {
-            alert(" ویل ب سەرکەفتیانە هاتە ژێبرن");
-            loadWheels();
-        }).catch(error => {
-            console.error("Error deleting wheel:", error);
-            alert("ئاریشەک درست بو لدەمێ ژێبرنێ");
-        });
-    }
-    }
+        // Log movement before deletion
+        const now = Date.now();
+        return db.ref("movements/wheels").push({
+          timestamp: now,
+          name: code,
+          quantity: quantity,
+          action: "DELETED"
+        }).then(() => wheelRef.remove());
+      });
+    }).then(() => {
+      alert("ویل ب سەرکەفتیانە هاتە ژێبرن");
+      loadWheels();
+    }).catch(error => {
+      console.error("Error deleting wheel:", error);
+      alert("ئاریشەک درست بو لدەمێ ژێبرنێ");
+    });
+  }
+}
 
         function goBack() {
             window.history.back();
@@ -646,4 +670,3 @@ function saveEditWheel(key) {
         </script>
 </body>
 </html>
-
