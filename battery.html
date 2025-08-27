@@ -322,34 +322,42 @@
         let batteriesData = [];
 
         function saveBattery() {
-    const name = document.getElementById("batteryName").value.trim();
-    const volt = document.getElementById("batteryVolt").value.trim();
-    const buy = document.getElementById("buyPrice").value.trim();
-    const sell = document.getElementById("sellPrice").value.trim();
-    const quantity = document.getElementById("quantity").value.trim();
-    const warranty = document.getElementById("batteryWarranty").value.trim();
+  const name = document.getElementById("batteryName").value.trim();
+  const volt = document.getElementById("batteryVolt").value.trim();
+  const buy = document.getElementById("buyPrice").value.trim();
+  const sell = document.getElementById("sellPrice").value.trim();
+  const quantity = document.getElementById("quantity").value.trim();
+  const warranty = document.getElementById("batteryWarranty").value.trim();
 
-    if (name && volt && buy && sell && quantity) {
-        const now = Date.now(); // Timestamp in milliseconds
-        const highlightUntil = now + 30 * 60 * 1000; // 30 minutes from now
-        db.ref("batteries").push({
-            name,
-            volt,
-            warranty,
-            buy: parseFloat(buy),
-            sell: parseFloat(sell),
-            quantity: parseInt(quantity),
-            createdAt: now,
-            highlightUntil,
-            highlightType: "added"
-        }).then(() => {
-            alert("پاتری ب سەرکەفتیانە هاتە زێدەکرن!");
-            clearInputs();
-            loadBatteries();
-        }).catch(error => console.error("Error:", error));
-    } else {
-        alert("پێدفیە هەمی خانەیان تژی بکەی!");
-    }
+  if (name && volt && buy && sell && quantity) {
+    const now = Date.now();
+
+    db.ref("batteries").push({
+      name,
+      volt,
+      warranty,
+      buy: parseFloat(buy),
+      sell: parseFloat(sell),
+      quantity: parseInt(quantity),
+      createdAt: now,
+      highlightUntil: now + 30 * 60 * 1000,
+      highlightType: "added"
+    }).then(ref => {
+      // Add to movements
+      db.ref("movements/batteries").push({
+        timestamp: now,
+        name,
+        quantity: parseInt(quantity),
+        action: "ADDED"
+      });
+
+      alert("پاتری ب سەرکەفتیانە هاتە زێدەکرن!");
+      clearInputs();
+      loadBatteries();
+    }).catch(error => console.error("Error:", error));
+  } else {
+    alert("پێدفیە هەمی خانەیان تژی بکەی!");
+  }
 }
 
 
@@ -491,43 +499,83 @@ function editBattery(key) {
 
 
 function saveEditBattery(key) {
-    const name = document.getElementById(`editName-${key}`).value.trim();
-    const volt = document.getElementById(`editVolt-${key}`).value.trim();
-    const warranty = document.getElementById(`editWarranty-${key}`).value.trim();
-    const buy = document.getElementById(`editBuy-${key}`).value.trim();
-    const sell = document.getElementById(`editSell-${key}`).value.trim();
-    const quantity = document.getElementById(`editQuantity-${key}`).value.trim();
+  const name = document.getElementById(`editName-${key}`).value.trim();
+  const volt = document.getElementById(`editVolt-${key}`).value.trim();
+  const warranty = document.getElementById(`editWarranty-${key}`).value.trim();
+  const buy = document.getElementById(`editBuy-${key}`).value.trim();
+  const sell = document.getElementById(`editSell-${key}`).value.trim();
+  const newQuantity = parseInt(document.getElementById(`editQuantity-${key}`).value.trim());
 
-    if (name && volt && buy && sell && quantity) {
-        const now = Date.now();
-        const highlightUntil = now + 30 * 60 * 1000;
-        db.ref("batteries/" + key).update({
-            name,
-            volt,
-            warranty,
-            buy: parseFloat(buy),
-            sell: parseFloat(sell),
-            quantity: parseInt(quantity),
-            updatedAt: now,
-            highlightUntil,
-            highlightType: "updated"
-        }).then(() => {
-            alert("پاتەری ب سەرکەفتیانە هاتە نیکرن!");
-            loadBatteries();
-        }).catch(error => console.error("Error:", error));
-    } else {
-        alert("پێدفیە هەمی خانەیان تژی بکەی!");
-    }
+  if (name && volt && buy && sell && newQuantity !== undefined) {
+    const now = Date.now();
+
+    // First, get old battery data to compare quantity
+    db.ref("batteries/" + key).once("value").then(snapshot => {
+      const oldData = snapshot.val();
+      if (!oldData) throw new Error("Battery not found");
+
+      const oldQuantity = oldData.quantity || 0;
+      const quantityDiff = newQuantity - oldQuantity;
+
+      return db.ref("batteries/" + key).update({
+        name,
+        volt,
+        warranty,
+        buy: parseFloat(buy),
+        sell: parseFloat(sell),
+        quantity: newQuantity,
+        updatedAt: now,
+        highlightUntil: now + 30 * 60 * 1000,
+        highlightType: "updated"
+      }).then(() => ({ oldQuantity, newQuantity, quantityDiff }));
+    }).then(({ oldQuantity, newQuantity, quantityDiff }) => {
+      // Push movement log for edit with qty details
+      db.ref("movements/batteries").push({
+        timestamp: now,
+        name,
+        quantity: `Old: ${oldQuantity}, New: ${newQuantity} (Added: ${quantityDiff})`,
+        action: "EDITED"
+      });
+
+      alert("پاتەری ب سەرکەفتیانە هاتە نیکرن!");
+      loadBatteries();
+    }).catch(error => console.error("Error:", error));
+  } else {
+    alert("پێدفیە هەمی خانەیان تژی بکەی!");
+  }
 }
+function deleteBattery(key) {
+  if (confirm(" تە دفێت پاتری بهێتە ژێبرن ؟")) {
+    db.ref("batteries/" + key).once("value").then(snapshot => {
+      const battery = snapshot.val();
+      if (!battery) {
+        alert("پاتری نە هاتە دیتن");
+        throw new Error("Battery not found");
+      }
 
-        function deleteBattery(key) {
-            if (confirm(" تە دفێت پاتری بهێتە ژێبرن ؟")) {
-                db.ref("batteries/" + key).remove().then(() => {
-                    alert("پاتری ب سەرکەفتیانە هاتە ژێبرن");
-                    loadBatteries();
-                });
-            }
-        }
+      const name = battery.name || "-";
+      const quantity = battery.quantity || 0;
+      const now = Date.now();
+
+      // Add movement log for delete
+      return db.ref("movements/batteries").push({
+        timestamp: now,
+        name,
+        quantity,
+        action: "DELETED"
+      }).then(() => {
+        // Then delete the battery
+        return db.ref("batteries/" + key).remove();
+      });
+    }).then(() => {
+      alert("پاتری ب سەرکەفتیانە هاتە ژێبرن");
+      loadBatteries();
+    }).catch(error => {
+      console.error("Error:", error);
+      alert("هەڵەکێک ڕویدا لە کاتی ژێبرن");
+    });
+  }
+}
 
         function searchBatteries() {
         const query = document.getElementById("searchInput").value.trim().toLowerCase();
