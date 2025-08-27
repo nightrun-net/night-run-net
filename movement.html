@@ -358,28 +358,39 @@ function loadBatteryMovements() {
 
 
     function deleteTierMovements() {
-      if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
-        db.ref("movements/tiers").remove()
-          .then(() => alert("ب سەرکەفتیانە هاتنە ژێبرن"))
-          .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
-      }
-    }
+  if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
+    db.ref("movements/tiers").remove()
+      .then(() => {
+        alert("ب سەرکەفتیانە هاتنە ژێبرن");
+        location.reload(); // 🔄 Reload the page
+      })
+      .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
+  }
+}
 
-    function deleteWheelMovements() {
-      if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
-        db.ref("movements/wheels").remove()
-          .then(() => alert("ب سەرکەفتیانە هاتنە ژێبرن"))
-          .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
-      }
-    }
 
-    function deleteBatteryMovements() {
-      if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
-        db.ref("movements/batteries").remove()
-          .then(() => alert("ب سەرکەفتیانە هاتنە ژێبرن"))
-          .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
-      }
-    }
+function deleteWheelMovements() {
+  if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
+    db.ref("movements/wheels").remove()
+      .then(() => {
+        alert("ب سەرکەفتیانە هاتنە ژێبرن");
+        location.reload(); // 🔄 Reload the page after deletion
+      })
+      .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
+  }
+}
+
+
+  function deleteBatteryMovements() {
+  if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
+    db.ref("movements/batteries").remove()
+      .then(() => {
+        alert("ب سەرکەفتیانە هاتنە ژێبرن");
+        location.reload(); // 🔁 Reloads the page
+      })
+      .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
+  }
+}
 
     function goToDashboard() {
   window.location.href = 'dashboard.html'; // Change this URL to your actual dashboard path
