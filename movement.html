@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>تۆمارى گواستنەوەى تایەکان</title>
+  <style>
+    body {
+        font-family: Arial, sans-serif;
+      padding: 30px;
+      background: #f0f2f5;
+      color: #333;
+      direction: rtl;
+    }
+
+    h1, h2 {
+      color: #222;
+      font-weight: 600;
+    }
+
+    .movement-container,
+    #movementContainer {
+      max-height: 400px;
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      margin-top: 20px;
+      padding: 15px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+
+    thead th {
+      background-color: #f4f6f8;
+      color: #555;
+      font-weight: 600;
+      padding: 12px;
+      text-align: right;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    tbody td {
+      background: #fff;
+      padding: 14px 12px;
+      border-bottom: 1px solid #eee;
+      border-radius: 6px;
+      text-align: right;
+    }
+
+    tbody tr {
+      transition: background 0.2s;
+    }
+
+    tbody tr:hover {
+      background: #f1f9ff;
+    }
+
+    .added, .deleted, .edited {
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-block;
+      font-size: 13px;
+    }
+
+    .added {
+      background-color: #e6f9ec;
+      color: #2e7d32;
+    }
+
+    .deleted {
+      background-color: #fdecea;
+      color: #c62828;
+    }
+
+    .edited {
+      background-color: #e8f1fd;
+      color: #1565c0;
+    }
+
+    .movement-container::-webkit-scrollbar,
+    #movementContainer::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .movement-container::-webkit-scrollbar-track,
+    #movementContainer::-webkit-scrollbar-track {
+      background: #f0f0f0;
+    }
+
+    .movement-container::-webkit-scrollbar-thumb,
+    #movementContainer::-webkit-scrollbar-thumb {
+      background-color: #bbb;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 15px;
+      }
+
+      table {
+        font-size: 14px;
+      }
+
+      thead th,
+      tbody td {
+        padding: 10px;
+      }
+
+      h1, h2 {
+        font-size: 20px;
+      }
+    }
+
+    button {
+      font-size: 18px;
+      background-color: #c62828;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background-color 0.2s ease;
+    }
+
+    button:hover {
+      background-color: #b71c1c;
+    }
+  </style>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+</head>
+<body>
+
+    <body>
+        <button onclick="goToDashboard()" style="margin-bottom: 20px; background-color: #1976d2; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">
+          ← زفرین بو لیستا زانیاریان 
+        </button>
+      
+        <h1>📦 تومارا گشتی</h1>
+        <!-- rest of your page... -->
+    <br>
+    <br>
+      
+
+  <h1>تومارا گشتی یا تایران</h1>
+  
+  <button onclick="deleteTierMovements()">🗑️ ژێبرنا هەمی داتایێن تومارکری</button>
+
+  <div id="movementContainer">
+    <table id="movementTable">
+      <thead>
+        <tr>
+          <th>دەم</th>
+          <th>ناڤ</th>
+          <th>ژمارە</th>
+          <th>کار</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <br><br>
+  <h2>تومارا گشتی یا ویلان</h2>
+  <button onclick="deleteWheelMovements()">🗑️ ژێبرنا هەمی داتایێن تومارکری</button>
+
+  <div class="movement-container">
+    <table id="wheelMovementTable" class="movement-table">
+      <thead>
+        <tr>
+          <th>دەم</th>
+          <th>کود</th>
+          <th>ژمارە</th>
+          <th>کار</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <br><br>
+  <h2>تومارا گشتی یا پاتریان</h2>
+  <button onclick="deleteBatteryMovements()">🗑️ ژێبرنا هەمی داتایێن تومارکری</button>
+
+  <div class="movement-container">
+    <table id="batteryMovementTable" class="movement-table">
+      <thead>
+        <tr>
+          <th>دەم</th>
+          <th>ناڤ</th>
+          <th>ژمارە</th>
+          <th>کار</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBq2NdZ1UznuMuNNr37KJDKrtrM8HTMOvo",
+      authDomain: "edirsbarwari-7723e.firebaseapp.com",
+      databaseURL: "https://edirsbarwari-7723e-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "edirsbarwari-7723e",
+      storageBucket: "edirsbarwari-7723e.appspot.com",
+      messagingSenderId: "1098821018295",
+      appId: "1:1098821018295:web:06b1d698b6d0b43b226332",
+      measurementId: "G-818MFB3X5H"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+
+    function loadMovements() {
+  const movementTableBody = document.querySelector("#movementTable tbody");
+  if (!movementTableBody) {
+    console.error("Tire table body not found.");
+    return;
+  }
+
+  db.ref("movements/tiers").orderByChild("timestamp").on("value", snapshot => {
+    movementTableBody.innerHTML = "";
+
+    const entries = [];
+    snapshot.forEach(child => {
+      entries.push({ key: child.key, ...child.val() });
+    });
+
+    entries.reverse();
+
+    entries.forEach(entry => {
+      const time = new Date(entry.timestamp || Date.now()).toLocaleString();
+      const name = entry.name || "-";
+      const qty = entry.quantity || 0;
+      const action = (entry.action || "UNKNOWN").toUpperCase();
+
+      let actionClass = "";
+      if (action === "ADDED") actionClass = "added";
+      else if (action === "DELETED") actionClass = "deleted";
+      else if (action === "EDITED") actionClass = "edited";
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${time}</td>
+        <td>${name}</td>
+        <td>${qty}</td>
+        <td class="${actionClass}">${action}</td>
+      `;
+      movementTableBody.appendChild(row);
+    });
+  });
+}
+
+function loadWheelMovements() {
+  const wheelMovementTableBody = document.querySelector("#wheelMovementTable tbody");
+  if (!wheelMovementTableBody) return;
+
+  wheelMovementTableBody.innerHTML = "";
+
+  db.ref("movements/wheels").orderByChild("timestamp").once("value")
+    .then(snapshot => {
+      if (!snapshot.exists()) {
+        console.warn("No wheel movement data found.");
+        return;
+      }
+
+      const entries = [];
+      snapshot.forEach(child => {
+        entries.push(child.val());
+      });
+
+      entries.reverse();
+
+      entries.forEach(entry => {
+        const time = new Date(entry.timestamp || Date.now()).toLocaleString();
+        const code = entry.name || "-";
+        const qty = entry.quantity || 0;
+        const action = (entry.action || "UNKNOWN").toUpperCase();
+
+        const actionClass = {
+          "ADDED": "added",
+          "DELETED": "deleted",
+          "EDITED": "edited"
+        }[action] || "";
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${time}</td>
+          <td>${code}</td>
+          <td>${qty}</td>
+          <td class="${actionClass}">${action}</td>
+        `;
+        wheelMovementTableBody.appendChild(row);
+      });
+    })
+    .catch(error => {
+      console.error("Error loading wheel movements:", error);
+    });
+}
+function loadBatteryMovements() {
+  const batteryMovementTableBody = document.querySelector("#batteryMovementTable tbody");
+  if (!batteryMovementTableBody) return;
+
+  batteryMovementTableBody.innerHTML = "";
+
+  db.ref("movements/batteries").orderByChild("timestamp").once("value")
+    .then(snapshot => {
+      if (!snapshot.exists()) {
+        console.warn("No battery movement data found.");
+        return;
+      }
+
+      const entries = [];
+      snapshot.forEach(child => {
+        entries.push(child.val());
+      });
+
+      entries.reverse();
+
+      entries.forEach(entry => {
+        const time = new Date(entry.timestamp || Date.now()).toLocaleString();
+        const name = entry.name || "-";
+        const qty = entry.quantity || 0;
+        const action = (entry.action || "UNKNOWN").toUpperCase();
+
+        const actionClass = {
+          "ADDED": "added",
+          "DELETED": "deleted",
+          "EDITED": "edited"
+        }[action] || "";
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${time}</td>
+          <td>${name}</td>
+          <td>${qty}</td>
+          <td class="${actionClass}">${action}</td>
+        `;
+        batteryMovementTableBody.appendChild(row);
+      });
+    })
+    .catch(error => {
+      console.error("Error loading battery movements:", error);
+    });
+}
+
+
+    function deleteTierMovements() {
+      if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
+        db.ref("movements/tiers").remove()
+          .then(() => alert("ب سەرکەفتیانە هاتنە ژێبرن"))
+          .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
+      }
+    }
+
+    function deleteWheelMovements() {
+      if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
+        db.ref("movements/wheels").remove()
+          .then(() => alert("ب سەرکەفتیانە هاتنە ژێبرن"))
+          .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
+      }
+    }
+
+    function deleteBatteryMovements() {
+      if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
+        db.ref("movements/batteries").remove()
+          .then(() => alert("ب سەرکەفتیانە هاتنە ژێبرن"))
+          .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
+      }
+    }
+
+    function goToDashboard() {
+  window.location.href = 'dashboard.html'; // Change this URL to your actual dashboard path
+}
+
+
+    loadMovements();
+    loadWheelMovements();
+    loadBatteryMovements();
+  </script>
+</body>
+</html>
