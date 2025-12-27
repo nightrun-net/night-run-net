@@ -163,6 +163,7 @@
         <tr>
           <th>دەم</th>
           <th>ناڤ</th>
+          <th>قەبارە</th> <!-- SIZE -->
           <th>ژمارە</th>
           <th>کار</th>
         </tr>
@@ -170,6 +171,7 @@
       <tbody></tbody>
     </table>
   </div>
+  
 
   <br><br>
   <h2>تومارا گشتی یا ویلان</h2>
@@ -222,46 +224,53 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     
-
     function loadMovements() {
   const movementTableBody = document.querySelector("#movementTable tbody");
   if (!movementTableBody) {
-    console.error("Tire table body not found.");
+    console.error("Movement table body not found.");
     return;
   }
 
-  db.ref("movements/tiers").orderByChild("timestamp").on("value", snapshot => {
-    movementTableBody.innerHTML = "";
+  db.ref("movements/tiers")
+    .orderByChild("timestamp")
+    .on("value", snapshot => {
 
-    const entries = [];
-    snapshot.forEach(child => {
-      entries.push({ key: child.key, ...child.val() });
+      movementTableBody.innerHTML = "";
+
+      const entries = [];
+      snapshot.forEach(child => {
+        entries.push({ key: child.key, ...child.val() });
+      });
+
+      // Show newest first
+      entries.reverse();
+
+      entries.forEach(entry => {
+        const time = new Date(entry.timestamp || Date.now()).toLocaleString();
+        const name = entry.name || "-";
+        const size = entry.size || "-";      // now properly filled
+        const qty = entry.quantity || 0;
+        const action = (entry.action || "UNKNOWN").toUpperCase();
+
+        let actionClass = "";
+        if (action === "ADDED") actionClass = "added";
+        else if (action === "DELETED") actionClass = "deleted";
+        else if (action === "EDITED") actionClass = "edited";
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${time}</td>
+          <td>${name}</td>
+          <td>${size}</td>
+          <td>${qty}</td>
+          <td class="${actionClass}">${action}</td>
+        `;
+
+        movementTableBody.appendChild(row);
+      });
     });
-
-    entries.reverse();
-
-    entries.forEach(entry => {
-      const time = new Date(entry.timestamp || Date.now()).toLocaleString();
-      const name = entry.name || "-";
-      const qty = entry.quantity || 0;
-      const action = (entry.action || "UNKNOWN").toUpperCase();
-
-      let actionClass = "";
-      if (action === "ADDED") actionClass = "added";
-      else if (action === "DELETED") actionClass = "deleted";
-      else if (action === "EDITED") actionClass = "edited";
-
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${time}</td>
-        <td>${name}</td>
-        <td>${qty}</td>
-        <td class="${actionClass}">${action}</td>
-      `;
-      movementTableBody.appendChild(row);
-    });
-  });
 }
+
 
 function loadWheelMovements() {
   const wheelMovementTableBody = document.querySelector("#wheelMovementTable tbody");
@@ -358,39 +367,28 @@ function loadBatteryMovements() {
 
 
     function deleteTierMovements() {
-  if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
-    db.ref("movements/tiers").remove()
-      .then(() => {
-        alert("ب سەرکەفتیانە هاتنە ژێبرن");
-        location.reload(); // 🔄 Reload the page
-      })
-      .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
-  }
-}
+      if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
+        db.ref("movements/tiers").remove()
+          .then(() => alert("ب سەرکەفتیانە هاتنە ژێبرن"))
+          .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
+      }
+    }
 
+    function deleteWheelMovements() {
+      if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
+        db.ref("movements/wheels").remove()
+          .then(() => alert("ب سەرکەفتیانە هاتنە ژێبرن"))
+          .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
+      }
+    }
 
-function deleteWheelMovements() {
-  if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
-    db.ref("movements/wheels").remove()
-      .then(() => {
-        alert("ب سەرکەفتیانە هاتنە ژێبرن");
-        location.reload(); // 🔄 Reload the page after deletion
-      })
-      .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
-  }
-}
-
-
-  function deleteBatteryMovements() {
-  if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
-    db.ref("movements/batteries").remove()
-      .then(() => {
-        alert("ب سەرکەفتیانە هاتنە ژێبرن");
-        location.reload(); // 🔁 Reloads the page
-      })
-      .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
-  }
-}
+    function deleteBatteryMovements() {
+      if (confirm("تە دڤێت هەمی داتا بێهنە ژێبرن ؟")) {
+        db.ref("movements/batteries").remove()
+          .then(() => alert("ب سەرکەفتیانە هاتنە ژێبرن"))
+          .catch(err => alert("ئاریشەک د ژێبرنێ دا دروست بو: " + err.message));
+      }
+    }
 
     function goToDashboard() {
   window.location.href = 'dashboard.html'; // Change this URL to your actual dashboard path
