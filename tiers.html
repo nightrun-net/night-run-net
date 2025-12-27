@@ -357,6 +357,7 @@
         // Also log to 'movements/tiers'
         const movementEntry = {
           name: name,
+          size: size,           // now stored
           quantity: parseInt(quantity),
           timestamp: now,
           action: "ADDED"
@@ -568,6 +569,7 @@ function saveEditTier(key) {
           if (qtyDiff !== 0) {
             const movementEntry = {
               name: name,
+              size: size,           // now stored
               quantity: `(old is ${oldQty}, new is ${newQty}, added is ${qtyDiff})`,
               timestamp: now,
               action: "EDITED"
@@ -604,6 +606,7 @@ function deleteTier(key) {
             // Add to movements log with DELETED action
             const movementEntry = {
               name: tierData.name || "Unknown",
+              size: tierData.size || "-",      // now included
               quantity: parseInt(tierData.quantity) || 0,
               timestamp: Date.now(),
               action: "DELETED"
@@ -621,6 +624,7 @@ function deleteTier(key) {
       });
   }
 }
+
 
 
         function searchTiers() {
